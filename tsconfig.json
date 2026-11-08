@@ -1,0 +1,34 @@
+{
+    "compilerOptions": {
+        "target": "es2022",
+        "module": "commonjs",
+        "resolveJsonModule": true,
+        "lib": ["es2022", "esnext"],
+        "declaration": true,
+        "outDir": "./dist",
+        "rootDir": "./",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/config/*": ["src/config/*"],
+            "@/controllers/*": ["src/controllers/*"],
+            "@/routes/*": ["src/routes/*"],
+            "@/services/*": ["src/services/*"],
+            "@/utils/*": ["src/utils/*"],
+            "@/types/*": ["src/types/*"],
+            "@/database/*": ["src/database/*"],
+            "@/*": ["src/*"]
+        }
+    },
+    "typeRoots": ["./node_modules/@types"],
+    "include": [
+        "src/**/*",
+        "migrations/scripts/**/*",
+        "scripts/**/*",
+        "knexfile.ts"
+    ],
+    "exclude": ["node_modules", "dist", "migrations/queries"]
+}

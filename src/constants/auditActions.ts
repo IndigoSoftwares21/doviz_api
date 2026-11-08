@@ -1,0 +1,34 @@
+// Dot-namespaced so logs can be filtered by prefix (e.g. "auth.%").
+const AUDIT_ACTIONS = {
+    OTP_REQUESTED: "auth.otp.requested",
+    OTP_LOCKED: "auth.otp.locked",
+    LOGIN_SUCCEEDED: "auth.login.succeeded",
+    LOGIN_FAILED: "auth.login.failed",
+    USER_REGISTERED: "user.registered",
+    USER_NAME_UPDATED: "user.name.updated",
+    SESSION_UNLOCKED: "auth.session.unlocked",
+    SESSION_UNLOCK_FAILED: "auth.session.unlock_failed",
+    SESSION_REVOKED: "auth.session.revoked",
+    REFRESH_TOKEN_REUSED: "auth.refresh_token.reused",
+    LOGOUT: "auth.logout",
+    DEVICE_TRUSTED: "security.device.trusted",
+    DEVICE_REVOKED: "security.device.revoked",
+    EMAIL_VERIFICATION_REQUESTED: "user.email.verification_requested",
+    EMAIL_VERIFICATION_FAILED: "user.email.verification_failed",
+    EMAIL_VERIFICATION_LOCKED: "user.email.verification_locked",
+    EMAIL_VERIFIED: "user.email.verified",
+    PIN_CREATED: "security.pin.created",
+    PIN_CHANGED: "security.pin.changed",
+    PIN_RESET: "security.pin.reset",
+    PIN_RESET_FAILED: "security.pin.reset_failed",
+    PIN_VERIFICATION_FAILED: "security.pin.verification_failed",
+    PIN_LOCKED: "security.pin.locked",
+    BIOMETRIC_ENABLED: "security.biometric.enabled",
+    BIOMETRIC_DISABLED: "security.biometric.disabled",
+    BIOMETRIC_VERIFIED: "security.biometric.verified",
+    BIOMETRIC_VERIFICATION_FAILED: "security.biometric.verification_failed",
+} as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
+
+export default AUDIT_ACTIONS;

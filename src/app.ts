@@ -1,0 +1,144 @@
+import express from "express";
+import type { Server } from "http";
+import { disconnect } from "@/database";
+import { handleMulterError } from "@/middlewares/multer";
+import appRoutes from "@/routes/app.routes";
+import docsRoutes from "@/routes/docs.routes";
+
+import dotenv from "dotenv";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import monitoring from "./utils/monitoring";
+const corsOptions = {
+    origin: [process.env.CORS_ORIGIN || "http://localhost:5173"],
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    preflightContinue: false,
+};
+
+class App {
+    public express: express.Application;
+    public server?: Server;
+
+    constructor() {
+        this.express = express();
+        this.initializeMiddlewares();
+        this.initializeRoutes();
+        this.express.set("trust proxy", 1);
+    }
+
+    private initializeMiddlewares(): void {
+        this.express.use(cors(corsOptions));
+        this.express.use(express.json());
+        this.express.use(helmet());
+        this.express.use(helmet.xssFilter());
+        this.express.use(express.urlencoded({ extended: true }));
+        this.express.use((req, res, next) => {
+            res.setHeader("Content-Security-Policy", "default-src 'self'");
+            res.setHeader("Strict-Transport-Security", "max-age=31536000");
+            next();
+        });
+        this.express.use(handleMulterError);
+
+        this.express.use((req, res, next) => {
+            monitoring.info(`${req.method} ${req.path}`);
+            next();
+        });
+
+        if (process.env.APP_ENVIRONMENT === "PRODUCTION") {
+            // 30 requests per minute per IP
+            const limiter = rateLimit({
+                windowMs: 1 * 60 * 1000, // 1 minute
+                max: 60, // limit each IP to 30 requests per windowMs
+            });
+            this.express.use(limiter);
+        }
+    }
+
+    private initializeRoutes(): void {
+        monitoring.info("Initializing routes");
+        
+        const apiVersion = process.env.API_VERSION || 'v1';
+        
+        // Register route modules here
+        this.express.use(`/api/${apiVersion}/app`, appRoutes);
+        monitoring.info(`Registered route: /api/${apiVersion}/app`);
+
+        // Password-protected API reference (disabled unless DOCS_* env is set)
+        this.express.use("/docs", docsRoutes);
+    }
+
+    public async start(
+        port: number,
+        maxPortAttempts = 10,
+    ): Promise<void> {
+        dotenv.config();
+
+        let currentPort = port;
+
+        for (let attempt = 0; attempt < maxPortAttempts; attempt++) {
+            try {
+                await this.listen(currentPort);
+                if (currentPort !== port) {
+                    monitoring.info(
+                        `Port ${port} was in use — started on ${currentPort} instead.`,
+                    );
+                }
+                return;
+            } catch (error) {
+                if (!isPortInUseError(error)) {
+                    monitoring.error("Failed to start server:", error as Error);
+                    await disconnect();
+                    process.exit(1);
+                }
+                currentPort += 1;
+            }
+        }
+
+        monitoring.error(
+            "Failed to start server:",
+            new Error(
+                `No free port found after trying ${port}-${currentPort - 1}.`,
+            ),
+        );
+        await disconnect();
+        process.exit(1);
+    }
+
+    private listen(port: number): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const server = this.express.listen(port);
+
+            server.once("listening", () => {
+                this.server = server;
+                monitoring.info(`Server running on port ${port}`);
+                resolve();
+            });
+
+            server.once("error", (error) => {
+                server.removeAllListeners();
+                reject(error);
+            });
+        });
+    }
+}
+
+function isPortInUseError(error: unknown): boolean {
+    return (
+        !!error &&
+        typeof error === "object" &&
+        (error as NodeJS.ErrnoException).code === "EADDRINUSE"
+    );
+}
+
+const app = new App();
+
+// Only auto-start the server when this file is run directly (e.g. `node
+// dist/app.js`) — importing it (for example from a test) should not bind
+// a real port.
+if (require.main === module) {
+    const PORT = parseInt(process.env.PORT || "6969", 10);
+    app.start(PORT);
+}
+
+export default app;
