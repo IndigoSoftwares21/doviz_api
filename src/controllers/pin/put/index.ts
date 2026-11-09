@@ -4,6 +4,7 @@ import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import modifyPin from "@/actions/pin/modifyPin";
 import putPinSchema from "./schema/putPinSchema";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 
 const putPin = async (req: Request, res: Response) => {
     try {
@@ -20,7 +21,7 @@ const putPin = async (req: Request, res: Response) => {
             userAgent: req.get("user-agent")?.slice(0, 512) ?? null,
         });
 
-        if (verification.status !== "verified") {
+        if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
             return handlePinFailure({ res, req, verification });
         }
 

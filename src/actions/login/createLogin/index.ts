@@ -15,6 +15,9 @@ import insertSession from "./queries/insertSession";
 import insertUserDevice from "./queries/insertUserDevice";
 import updateDeviceSessionsRevoked from "./queries/updateDeviceSessionsRevoked";
 import insertRefreshToken from "./queries/insertRefreshToken";
+import SESSION_REVOKE_REASON from "@/constants/sessionRevokeReason";
+import CODE_FAILURE_REASON from "@/constants/codeFailureReason";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateLogin {
     phoneNumber: string;
@@ -56,10 +59,10 @@ const createLogin = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.LOGIN_FAILED,
-                actorType: "anonymous",
+                actorType: AUDIT_ACTOR_TYPE.ANONYMOUS,
                 ipAddress,
                 userAgent,
-                metadata: { phoneNumber, reason: "no_live_otp" },
+                metadata: { phoneNumber, reason: CODE_FAILURE_REASON.NO_LIVE_OTP },
             });
 
             return null;
@@ -85,20 +88,20 @@ const createLogin = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.LOGIN_FAILED,
-                actorType: "anonymous",
-                entityType: "phone_otp",
+                actorType: AUDIT_ACTOR_TYPE.ANONYMOUS,
+                entityType: AUDIT_ENTITY_TYPE.PHONE_OTP,
                 entityId: otpRow.id,
                 ipAddress,
                 userAgent,
-                metadata: { phoneNumber, reason: "invalid_code", attempts },
+                metadata: { phoneNumber, reason: CODE_FAILURE_REASON.INVALID_CODE, attempts },
             });
 
             if (isLocked) {
                 await createAuditLog({
                     trx,
                     action: AUDIT_ACTIONS.OTP_LOCKED,
-                    actorType: "anonymous",
-                    entityType: "phone_otp",
+                    actorType: AUDIT_ACTOR_TYPE.ANONYMOUS,
+                    entityType: AUDIT_ENTITY_TYPE.PHONE_OTP,
                     entityId: otpRow.id,
                     ipAddress,
                     userAgent,
@@ -117,9 +120,9 @@ const createLogin = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.USER_REGISTERED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: user.id,
-                entityType: "user",
+                entityType: AUDIT_ENTITY_TYPE.USER,
                 entityId: user.id,
                 ipAddress,
                 userAgent,
@@ -142,16 +145,16 @@ const createLogin = async ({
             trx,
             userDeviceId: device.id,
             revokedAt: now,
-            revokedReason: "replaced_by_login",
+            revokedReason: SESSION_REVOKE_REASON.REPLACED_BY_LOGIN,
         });
 
         if (device.isNewDevice) {
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.DEVICE_TRUSTED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: user.id,
-                entityType: "user_device",
+                entityType: AUDIT_ENTITY_TYPE.USER_DEVICE,
                 entityId: device.id,
                 ipAddress,
                 userAgent,
@@ -174,9 +177,9 @@ const createLogin = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.LOGIN_SUCCEEDED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: user.id,
-            entityType: "auth_session",
+            entityType: AUDIT_ENTITY_TYPE.AUTH_SESSION,
             entityId: session.id,
             ipAddress,
             userAgent,

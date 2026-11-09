@@ -4,6 +4,7 @@ import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import createBiometric from "@/actions/biometric/createBiometric";
 import postBiometricSchema from "./schema/postBiometricSchema";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 
 const postBiometric = async (req: Request, res: Response) => {
     try {
@@ -22,7 +23,7 @@ const postBiometric = async (req: Request, res: Response) => {
             userAgent: req.get("user-agent")?.slice(0, 512) ?? null,
         });
 
-        if (verification.status !== "verified") {
+        if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
             return handlePinFailure({ res, req, verification });
         }
 

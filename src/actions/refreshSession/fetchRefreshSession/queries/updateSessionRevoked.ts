@@ -1,11 +1,12 @@
 import { Kysely } from "kysely";
 import { Database } from "@/database/types";
+import { SessionRevokeReason } from "@/constants/sessionRevokeReason";
 
 interface IUpdateSessionRevoked {
     trx: Kysely<Database>;
     sessionId: string;
     revokedAt: Date;
-    revokedReason: string;
+    revokedReason: SessionRevokeReason;
 }
 
 const updateSessionRevoked = async ({ trx, sessionId, revokedAt, revokedReason }: IUpdateSessionRevoked) => {

@@ -4,6 +4,8 @@ import createAuditLog from "@/actions/auditLog/createAuditLog";
 import createPinVerification, { PinVerification } from "@/actions/pinVerification/createPinVerification";
 import selectUserNameForUpdate from "./queries/selectUserNameForUpdate";
 import updateUserName from "./queries/updateUserName";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface IModifyUserName {
     userId: string;
@@ -31,7 +33,7 @@ const modifyUserName = async ({
     if (pin) {
         ({ data: verification } = await createPinVerification({ userId, pin, ipAddress, userAgent }));
 
-        if (verification.status !== "verified") {
+        if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
             return { data: null, verification };
         }
     }
@@ -51,9 +53,9 @@ const modifyUserName = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.USER_NAME_UPDATED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "user",
+            entityType: AUDIT_ENTITY_TYPE.USER,
             entityId: userId,
             ipAddress,
             userAgent,

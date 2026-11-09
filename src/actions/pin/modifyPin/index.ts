@@ -4,6 +4,8 @@ import createAuditLog from "@/actions/auditLog/createAuditLog";
 import createPinVerification from "@/actions/pinVerification/createPinVerification";
 import hashPin from "@/utils/auth/hashPin";
 import updatePinHash from "./queries/updatePinHash";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
+import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
 
 interface IModifyPin {
     userId: string;
@@ -22,7 +24,7 @@ const modifyPin = async ({ userId, currentPin, newPin, ipAddress, userAgent }: I
         userAgent,
     });
 
-    if (verification.status !== "verified") {
+    if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
         return { data: null, verification };
     }
 
@@ -34,7 +36,7 @@ const modifyPin = async ({ userId, currentPin, newPin, ipAddress, userAgent }: I
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.PIN_CHANGED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
             ipAddress,
             userAgent,

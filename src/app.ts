@@ -4,6 +4,9 @@ import { disconnect } from "@/database";
 import { handleMulterError } from "@/middlewares/multer";
 import appRoutes from "@/routes/app.routes";
 import docsRoutes from "@/routes/docs.routes";
+import webhookRoutes from "@/routes/webhook.routes";
+import registerCryptoProviders from "@/services/crypto/providers";
+import startJobs from "@/jobs/startJobs";
 
 import dotenv from "dotenv";
 import cors from "cors";
@@ -50,6 +53,9 @@ class App {
             const limiter = rateLimit({
                 windowMs: 1 * 60 * 1000, // 1 minute
                 max: 60, // limit each IP to 30 requests per windowMs
+                // Provider webhooks come from a few fixed IPs in bursts; a 429
+                // would only delay money events (they're verified per provider).
+                skip: (req) => req.path.startsWith(`/api/${process.env.API_VERSION || "v1"}/webhooks/`),
             });
             this.express.use(limiter);
         }
@@ -57,12 +63,18 @@ class App {
 
     private initializeRoutes(): void {
         monitoring.info("Initializing routes");
+
+        // Crypto/payout providers must be registered before any route uses them.
+        registerCryptoProviders();
         
         const apiVersion = process.env.API_VERSION || 'v1';
         
         // Register route modules here
         this.express.use(`/api/${apiVersion}/app`, appRoutes);
         monitoring.info(`Registered route: /api/${apiVersion}/app`);
+
+        this.express.use(`/api/${apiVersion}/webhooks`, webhookRoutes);
+        monitoring.info(`Registered route: /api/${apiVersion}/webhooks`);
 
         // Password-protected API reference (disabled unless DOCS_* env is set)
         this.express.use("/docs", docsRoutes);
@@ -138,7 +150,8 @@ const app = new App();
 // a real port.
 if (require.main === module) {
     const PORT = parseInt(process.env.PORT || "6969", 10);
-    app.start(PORT);
+    // Background jobs run only in a real server process, never in tests.
+    app.start(PORT).then(() => startJobs());
 }
 
 export default app;

@@ -1,5 +1,9 @@
 import AUTH from "@/constants/auth";
 import successEnvelope from "@/docs/utils/successEnvelope";
+import cryptoTags from "@/docs/paths/cryptoTags";
+import cryptoPaths from "@/docs/paths/cryptoPaths";
+import walletPaths from "@/docs/paths/wallet";
+import bankPaths from "@/docs/paths/bankPaths";
 
 const json = (schema: object, example?: object) => ({
     "application/json": example ? { schema, example } : { schema },
@@ -65,6 +69,7 @@ Limited endpoints return \`429\` when exceeded, with standard \`RateLimit\` / \`
     },
     servers: [{ url: "/api/v1/app", description: "This server" }],
     tags: [
+        ...cryptoTags,
         { name: "Health", description: "Service status." },
         {
             name: "Phone login",
@@ -395,6 +400,9 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
         },
     },
     paths: {
+        ...cryptoPaths,
+        ...walletPaths,
+        ...bankPaths,
         "/health": {
             get: {
                 tags: ["Health"],

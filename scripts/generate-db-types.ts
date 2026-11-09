@@ -107,9 +107,11 @@ export interface Database {
         // PostgreSQL to TypeScript type mapping
         const typeMap: Record<string, string> = {
             integer: "number",
-            bigint: "number",
-            numeric: "number",
-            decimal: "number",
+            // pg returns int8 and numeric as strings (exact). Never type
+            // money as a JS number: it silently loses precision.
+            bigint: "string",
+            numeric: "string",
+            decimal: "string",
             real: "number",
             "double precision": "number",
             smallint: "number",

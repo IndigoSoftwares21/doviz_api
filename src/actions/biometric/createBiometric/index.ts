@@ -4,6 +4,8 @@ import createAuditLog from "@/actions/auditLog/createAuditLog";
 import createPinVerification from "@/actions/pinVerification/createPinVerification";
 import updateDeviceBiometricKeysRevoked from "./queries/updateDeviceBiometricKeysRevoked";
 import insertBiometricKey from "./queries/insertBiometricKey";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateBiometric {
     userId: string;
@@ -28,7 +30,7 @@ const createBiometric = async ({
 }: ICreateBiometric) => {
     const { data: verification } = await createPinVerification({ userId, pin, ipAddress, userAgent });
 
-    if (verification.status !== "verified") {
+    if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
         return { data: null, verification };
     }
 
@@ -42,9 +44,9 @@ const createBiometric = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.BIOMETRIC_ENABLED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "biometric_key",
+            entityType: AUDIT_ENTITY_TYPE.BIOMETRIC_KEY,
             entityId: biometricKey.id,
             ipAddress,
             userAgent,

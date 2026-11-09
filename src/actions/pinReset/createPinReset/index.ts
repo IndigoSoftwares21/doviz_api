@@ -1,6 +1,7 @@
 import { withTransaction } from "@/database";
 import AUTH from "@/constants/auth";
 import AUDIT_ACTIONS from "@/constants/auditActions";
+import CODE_FAILURE_REASON from "@/constants/codeFailureReason";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import hashOtp from "@/utils/auth/hashOtp";
 import hashPin from "@/utils/auth/hashPin";
@@ -12,6 +13,8 @@ import updateOtpConsumed from "@/actions/login/createLogin/queries/updateOtpCons
 import updatePinHash from "@/actions/pin/modifyPin/queries/updatePinHash";
 import selectUserPhoneForReset from "./queries/selectUserPhoneForReset";
 import updateBiometricKeysRevoked from "./queries/updateBiometricKeysRevoked";
+import auditPinResetFailure from "./utils/auditPinResetFailure";
+import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
 
 interface ICreatePinReset {
     userId: string;
@@ -21,11 +24,13 @@ interface ICreatePinReset {
     userAgent: string | null;
 }
 
-// Resets the PIN with an SMS code sent to the account's phone. Also clears
-// any PIN lock and revokes every biometric key — a forgotten PIN can mean a
-// compromised device, so biometrics must be re-enrolled. Returns
+// Resets the PIN via an SMS code; clears any PIN lock and revokes every
+// biometric key (a forgotten PIN can mean a compromised device). Returns
 // { data: null } for any code failure; failed attempts are committed.
 const createPinReset = async ({ userId, otp, newPin, ipAddress, userAgent }: ICreatePinReset) => {
+    // Hashed before locking: bcrypt is slow by design (~250ms).
+    const pinHash = await hashPin({ userId, pin: newPin });
+
     const data = await withTransaction(async (trx) => {
         const now = new Date();
         const purpose = AUTH.OTP_PURPOSE_PIN_RESET;
@@ -36,49 +41,26 @@ const createPinReset = async ({ userId, otp, newPin, ipAddress, userAgent }: ICr
         const otpRow = await selectLiveOtp({ trx, phoneNumber: user.phoneNumber, purpose, now });
 
         if (!otpRow) {
+            // Same work as a real check, so timing doesn't reveal a live code.
             hashOtp({ subject, otp });
-
-            await createAuditLog({
-                trx,
-                action: AUDIT_ACTIONS.PIN_RESET_FAILED,
-                actorType: "user",
-                actorId: userId,
-                ipAddress,
-                userAgent,
-                metadata: { reason: "no_live_otp" },
+            await auditPinResetFailure({
+                trx, userId, otpId: null, reason: CODE_FAILURE_REASON.NO_LIVE_OTP, ipAddress, userAgent,
             });
-
             return null;
         }
 
         if (!verifyOtpHash({ subject, otp, codeHash: otpRow.codeHash })) {
             const attempts = otpRow.attempts + 1;
+            const revokedAt = attempts >= otpRow.maxAttempts ? now : null;
 
-            await updateOtpAttempts({
-                trx,
-                id: otpRow.id,
-                attempts,
-                revokedAt: attempts >= otpRow.maxAttempts ? now : null,
+            await updateOtpAttempts({ trx, id: otpRow.id, attempts, revokedAt });
+            await auditPinResetFailure({
+                trx, userId, otpId: otpRow.id, reason: CODE_FAILURE_REASON.INVALID_CODE, attempts, ipAddress, userAgent,
             });
-
-            await createAuditLog({
-                trx,
-                action: AUDIT_ACTIONS.PIN_RESET_FAILED,
-                actorType: "user",
-                actorId: userId,
-                entityType: "phone_otp",
-                entityId: otpRow.id,
-                ipAddress,
-                userAgent,
-                metadata: { reason: "invalid_code", attempts },
-            });
-
             return null;
         }
 
         await updateOtpConsumed({ trx, id: otpRow.id, consumedAt: now });
-
-        const pinHash = await hashPin({ userId, pin: newPin });
         await updatePinHash({ trx, userId, pinHash, updatedAt: now });
 
         const revokedKeys = await updateBiometricKeysRevoked({ trx, userId, revokedAt: now });
@@ -86,7 +68,7 @@ const createPinReset = async ({ userId, otp, newPin, ipAddress, userAgent }: ICr
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.PIN_RESET,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
             ipAddress,
             userAgent,

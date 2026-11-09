@@ -1,0 +1,56 @@
+import { LEDGER_TRANSACTION_TYPE, ENTRY_DIRECTION } from "@/constants/ledger";
+import { DEPOSIT_STATUS } from "@/constants/cryptoStatus";
+
+const money = (example: string) => ({ type: "string", example });
+const nullableMoney = { type: ["string", "null"], example: "1560.00" };
+const dateTime = { type: "string", format: "date-time" };
+
+const depositSummary = {
+    id: { type: "string", format: "uuid" },
+    symbol: { type: ["string", "null"], example: "USDT" },
+    network: { type: ["string", "null"], example: "TRC20" },
+    cryptoAmount: { type: ["string", "null"], example: "100" },
+    grossNgn: { type: ["string", "null"], example: "157560.00" },
+    markupNgn: nullableMoney,
+    markupPercent: { type: ["string", "null"], example: "1.00" },
+};
+
+const statementLine = (deposit: Record<string, unknown>) => ({
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid", description: "Ledger entry id; use it for the detail endpoint." },
+        type: { type: "string", enum: Object.values(LEDGER_TRANSACTION_TYPE) },
+        direction: { type: "string", enum: Object.values(ENTRY_DIRECTION) },
+        amount: { ...money("156000.00"), description: "Always positive; see `direction`." },
+        balanceAfter: money("156000.00"),
+        description: { type: "string", example: "100 USDT converted to naira" },
+        createdAt: dateTime,
+        deposit: { type: ["object", "null"], properties: deposit, description: "Set for crypto conversions." },
+    },
+});
+
+export const statementItem = statementLine(depositSummary);
+
+export const statementDetail = statementLine({
+    ...depositSummary,
+    rateNgnPerUsd: { type: ["string", "null"], example: "1575.60" },
+    txHash: { type: ["string", "null"] },
+    confirmations: { type: ["integer", "null"] },
+    detectedAt: { type: ["string", "null"], format: "date-time" },
+    completedAt: { type: ["string", "null"], format: "date-time" },
+});
+
+export const incomingDeposit = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        status: { type: "string", enum: [DEPOSIT_STATUS.PENDING, DEPOSIT_STATUS.FLAGGED] },
+        subStatus: { type: ["string", "null"], example: "below_minimum" },
+        symbol: { type: "string", example: "USDT" },
+        network: { type: "string", example: "TRC20" },
+        cryptoAmount: { type: "string", example: "100" },
+        confirmations: { type: ["integer", "null"], example: 3 },
+        txHash: { type: ["string", "null"] },
+        detectedAt: dateTime,
+    },
+};

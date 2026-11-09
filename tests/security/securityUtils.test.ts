@@ -6,6 +6,10 @@ import parseBiometricPublicKey from "@/utils/auth/parseBiometricPublicKey";
 import verifyBiometricSignature from "@/utils/auth/verifyBiometricSignature";
 import getPhoneOtpSubject from "@/utils/auth/getPhoneOtpSubject";
 
+// Real cost-12 bcrypt (~250ms each) runs several times per test; under
+// parallel jest workers that can pass the 5s default, so allow more.
+jest.setTimeout(30_000);
+
 process.env.PIN_PEPPER = "test-pin-pepper-test-pin-pepper-test-0001";
 
 const p256 = () => generateKeyPairSync("ec", { namedCurve: "prime256v1" });

@@ -3,6 +3,7 @@ import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import createSessionChallenge from "@/actions/sessionChallenge/createSessionChallenge";
 import postSessionChallengeSchema from "./schema/postSessionChallengeSchema";
+import ACTION_FAILURE from "@/constants/actionFailure";
 
 const postSessionChallenge = async (req: Request, res: Response) => {
     try {
@@ -17,7 +18,7 @@ const postSessionChallenge = async (req: Request, res: Response) => {
             userAgent: req.get("user-agent")?.slice(0, 512) ?? null,
         });
 
-        if (failure === "invalid_session") {
+        if (failure === ACTION_FAILURE.INVALID_SESSION) {
             return handleError({
                 res,
                 req,
@@ -26,7 +27,7 @@ const postSessionChallenge = async (req: Request, res: Response) => {
             });
         }
 
-        if (failure === "biometrics_off") {
+        if (failure === ACTION_FAILURE.BIOMETRICS_OFF) {
             return handleError({ res, req, message: "Biometrics are not turned on for this device", code: 400 });
         }
 

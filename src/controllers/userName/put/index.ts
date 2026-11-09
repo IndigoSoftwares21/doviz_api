@@ -4,6 +4,7 @@ import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import modifyUserName from "@/actions/userName/modifyUserName";
 import putUserNameSchema from "./schema/putUserNameSchema";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 
 const putUserName = async (req: Request, res: Response) => {
     try {
@@ -22,7 +23,7 @@ const putUserName = async (req: Request, res: Response) => {
             userAgent: req.get("user-agent")?.slice(0, 512) ?? null,
         });
 
-        if (verification && verification.status !== "verified") {
+        if (verification && verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) {
             return handlePinFailure({ res, req, verification });
         }
 

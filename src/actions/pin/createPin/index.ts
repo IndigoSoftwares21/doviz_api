@@ -3,6 +3,7 @@ import AUDIT_ACTIONS from "@/constants/auditActions";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import hashPin from "@/utils/auth/hashPin";
 import insertTransactionPin from "./queries/insertTransactionPin";
+import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
 
 interface ICreatePin {
     userId: string;
@@ -21,7 +22,7 @@ const createPin = async ({ userId, pin, ipAddress, userAgent }: ICreatePin) => {
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.PIN_CREATED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
             ipAddress,
             userAgent,

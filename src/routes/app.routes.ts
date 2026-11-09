@@ -3,6 +3,10 @@ import getDemo from "@/controllers/demo/get";
 import postDemo from "@/controllers/demo/post";
 import authRoutes from "@/routes/auth.routes";
 import userRoutes from "@/routes/user.routes";
+import cryptoRoutes from "@/routes/crypto.routes";
+import walletRoutes from "@/routes/wallet.routes";
+import bankRoutes from "@/routes/bank.routes";
+import bankAccountRoutes from "@/routes/bankAccount.routes";
 
 const router = Router();
 
@@ -17,6 +21,11 @@ router.post("/demo", postDemo);
 
 // Add your app routes here
 router.use("/auth", authRoutes);
+// More specific /user path first so it isn't swallowed by /user.
+router.use("/user/bank-accounts", bankAccountRoutes);
 router.use("/user", userRoutes);
+router.use("/crypto", cryptoRoutes);
+router.use("/wallet", walletRoutes);
+router.use("/banks", bankRoutes);
 
 export default router;

@@ -2,6 +2,7 @@ import { withTransaction } from "@/database";
 import AUDIT_ACTIONS from "@/constants/auditActions";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import updateDeviceBiometricKeysRevoked from "./queries/updateDeviceBiometricKeysRevoked";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface IRemoveBiometric {
     userId: string;
@@ -25,9 +26,9 @@ const removeBiometric = async ({ userId, deviceId, ipAddress, userAgent }: IRemo
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.BIOMETRIC_DISABLED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: userId,
-                entityType: "biometric_key",
+                entityType: AUDIT_ENTITY_TYPE.BIOMETRIC_KEY,
                 entityId: revokedKeys[0].id,
                 ipAddress,
                 userAgent,

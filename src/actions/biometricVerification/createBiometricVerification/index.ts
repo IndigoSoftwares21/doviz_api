@@ -7,6 +7,7 @@ import selectLiveBiometricChallenge from "./queries/selectLiveBiometricChallenge
 import updateBiometricChallengeConsumed from "./queries/updateBiometricChallengeConsumed";
 import selectActiveBiometricKeyById from "./queries/selectActiveBiometricKeyById";
 import updateBiometricKeyLastUsed from "./queries/updateBiometricKeyLastUsed";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateBiometricVerification {
     userId: string;
@@ -38,9 +39,9 @@ const createBiometricVerification = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.BIOMETRIC_VERIFICATION_FAILED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: userId,
-                entityType: "biometric_challenge",
+                entityType: AUDIT_ENTITY_TYPE.BIOMETRIC_CHALLENGE,
                 entityId: challengeId,
                 ipAddress,
                 userAgent,
@@ -83,9 +84,9 @@ const createBiometricVerification = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.BIOMETRIC_VERIFIED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "biometric_key",
+            entityType: AUDIT_ENTITY_TYPE.BIOMETRIC_KEY,
             entityId: biometricKey.id,
             ipAddress,
             userAgent,

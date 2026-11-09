@@ -8,6 +8,8 @@ import getPhoneOtpSubject from "@/utils/auth/getPhoneOtpSubject";
 import sendSms from "@/services/sms/sendSms";
 import updateLiveOtps from "./queries/updateLiveOtps";
 import insertOtp from "./queries/insertOtp";
+import { AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
+import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
 
 interface ICreateOtp {
     phoneNumber: string;
@@ -32,15 +34,17 @@ const createOtp = async ({
     const otp = generateOtp();
     const now = Date.now();
 
-    // SMS is sent inside the transaction: if delivery fails, the new OTP is
-    // rolled back and the previous one is not revoked.
+    // Send first, then record — no network call inside the transaction (it
+    // would hold a pooled connection and row locks for the whole SMS call).
+    // If sending fails nothing is written: the previous code stays valid and
+    // the resend cooldown isn't triggered by a message that never arrived.
+    await sendSms({
+        to: phoneNumber,
+        message: `Your Doviz ${SMS_ACTION[purpose]} is ${otp}. It expires in ${AUTH.OTP_TTL_SECONDS / 60} minutes. Never share this code with anyone, including Doviz staff.`,
+    });
+
     const data = await withTransaction(async (trx) => {
-        await updateLiveOtps({
-            trx,
-            phoneNumber,
-            purpose,
-            revokedAt: new Date(now),
-        });
+        await updateLiveOtps({ trx, phoneNumber, purpose, revokedAt: new Date(now) });
 
         const otpRow = await insertOtp({
             trx,
@@ -56,25 +60,18 @@ const createOtp = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.OTP_REQUESTED,
-            actorType: actorId ? "user" : "anonymous",
+            actorType: actorId ? AUDIT_ACTOR_TYPE.USER : AUDIT_ACTOR_TYPE.ANONYMOUS,
             actorId,
-            entityType: "phone_otp",
+            entityType: AUDIT_ENTITY_TYPE.PHONE_OTP,
             entityId: otpRow.id,
             ipAddress: requestIp,
             userAgent,
             metadata: { phoneNumber, purpose },
         });
 
-        await sendSms({
-            to: phoneNumber,
-            message: `Your Doviz ${SMS_ACTION[purpose]} is ${otp}. It expires in ${AUTH.OTP_TTL_SECONDS / 60} minutes. Never share this code with anyone, including Doviz staff.`,
-        });
-
         return {
             expiresAt: otpRow.expiresAt,
-            resendAvailableAt: new Date(
-                now + AUTH.OTP_RESEND_COOLDOWN_SECONDS * 1000,
-            ),
+            resendAvailableAt: new Date(now + AUTH.OTP_RESEND_COOLDOWN_SECONDS * 1000),
         };
     });
 

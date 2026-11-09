@@ -8,6 +8,8 @@ import selectLiveEmailVerification from "./queries/selectLiveEmailVerification";
 import updateEmailVerificationAttempts from "./queries/updateEmailVerificationAttempts";
 import updateEmailVerificationConsumed from "./queries/updateEmailVerificationConsumed";
 import updateUserEmail from "./queries/updateUserEmail";
+import CODE_FAILURE_REASON from "@/constants/codeFailureReason";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateEmailConfirmation {
     userId: string;
@@ -35,11 +37,11 @@ const createEmailConfirmation = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.EMAIL_VERIFICATION_FAILED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: userId,
                 ipAddress,
                 userAgent,
-                metadata: { reason: "no_live_code" },
+                metadata: { reason: CODE_FAILURE_REASON.NO_LIVE_CODE },
             });
 
             return null;
@@ -67,13 +69,13 @@ const createEmailConfirmation = async ({
                 action: isLocked
                     ? AUDIT_ACTIONS.EMAIL_VERIFICATION_LOCKED
                     : AUDIT_ACTIONS.EMAIL_VERIFICATION_FAILED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: userId,
-                entityType: "email_verification",
+                entityType: AUDIT_ENTITY_TYPE.EMAIL_VERIFICATION,
                 entityId: verificationRow.id,
                 ipAddress,
                 userAgent,
-                metadata: { email: verificationRow.email, reason: "invalid_code", attempts },
+                metadata: { email: verificationRow.email, reason: CODE_FAILURE_REASON.INVALID_CODE, attempts },
             });
 
             return null;
@@ -91,9 +93,9 @@ const createEmailConfirmation = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.EMAIL_VERIFIED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "user",
+            entityType: AUDIT_ENTITY_TYPE.USER,
             entityId: userId,
             ipAddress,
             userAgent,

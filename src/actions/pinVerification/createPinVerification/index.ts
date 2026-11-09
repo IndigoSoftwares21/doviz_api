@@ -1,16 +1,18 @@
 import { withTransaction } from "@/database";
 import AUTH from "@/constants/auth";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import AUDIT_ACTIONS from "@/constants/auditActions";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import verifyPinHash from "@/utils/auth/verifyPinHash";
 import selectTransactionPinForUpdate from "./queries/selectTransactionPinForUpdate";
 import updatePinAttempts from "./queries/updatePinAttempts";
+import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
 
 export type PinVerification =
-    | { status: "verified" }
-    | { status: "invalid"; remainingAttempts: number }
-    | { status: "locked"; lockedUntil: Date }
-    | { status: "not_set" };
+    | { status: typeof PIN_VERIFICATION_STATUS.VERIFIED }
+    | { status: typeof PIN_VERIFICATION_STATUS.INVALID; remainingAttempts: number }
+    | { status: typeof PIN_VERIFICATION_STATUS.LOCKED; lockedUntil: Date }
+    | { status: typeof PIN_VERIFICATION_STATUS.NOT_SET };
 
 interface ICreatePinVerification {
     userId: string;
@@ -35,11 +37,11 @@ const createPinVerification = async ({
         const pinRow = await selectTransactionPinForUpdate({ trx, userId });
 
         if (!pinRow) {
-            return { status: "not_set" };
+            return { status: PIN_VERIFICATION_STATUS.NOT_SET };
         }
 
         if (pinRow.lockedUntil && pinRow.lockedUntil > now) {
-            return { status: "locked", lockedUntil: pinRow.lockedUntil };
+            return { status: PIN_VERIFICATION_STATUS.LOCKED, lockedUntil: pinRow.lockedUntil };
         }
 
         const isValid = await verifyPinHash({ userId, pin, pinHash: pinRow.pinHash });
@@ -49,7 +51,7 @@ const createPinVerification = async ({
                 await updatePinAttempts({ trx, userId, failedAttempts: 0, lockedUntil: null });
             }
 
-            return { status: "verified" };
+            return { status: PIN_VERIFICATION_STATUS.VERIFIED };
         }
 
         const failedAttempts = pinRow.failedAttempts + 1;
@@ -66,7 +68,7 @@ const createPinVerification = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.PIN_VERIFICATION_FAILED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
             ipAddress,
             userAgent,
@@ -77,17 +79,17 @@ const createPinVerification = async ({
             await createAuditLog({
                 trx,
                 action: AUDIT_ACTIONS.PIN_LOCKED,
-                actorType: "user",
+                actorType: AUDIT_ACTOR_TYPE.USER,
                 actorId: userId,
                 ipAddress,
                 userAgent,
                 metadata: { lockedUntil: lockedUntil.toISOString() },
             });
 
-            return { status: "locked", lockedUntil };
+            return { status: PIN_VERIFICATION_STATUS.LOCKED, lockedUntil };
         }
 
-        return { status: "invalid", remainingAttempts: AUTH.PIN_MAX_ATTEMPTS - failedAttempts };
+        return { status: PIN_VERIFICATION_STATUS.INVALID, remainingAttempts: AUTH.PIN_MAX_ATTEMPTS - failedAttempts };
     });
 
     return { data };

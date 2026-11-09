@@ -1,0 +1,42 @@
+import monitoring from "@/utils/monitoring";
+import withAdvisoryLock from "./withAdvisoryLock";
+import sweepWebhookEvents from "./sweepWebhookEvents";
+import reconcileDeposits from "./reconcileDeposits";
+
+const JOBS = [
+    { name: "sweep-webhook-events", lockKey: 7301001, intervalMs: 60_000, run: sweepWebhookEvents },
+    { name: "reconcile-deposits", lockKey: 7301002, intervalMs: 10 * 60_000, run: reconcileDeposits },
+];
+
+/**
+ * Starts background jobs. Called only when the server actually starts (never
+ * in tests or on import). Set JOBS_ENABLED=false to run an API instance
+ * without jobs. Advisory locks stop instances running a job concurrently;
+ * the `running` flag stops overlap within this instance. Errors never crash
+ * the process.
+ */
+const startJobs = () => {
+    if (process.env.JOBS_ENABLED === "false") {
+        monitoring.info("Background jobs disabled (JOBS_ENABLED=false)");
+        return [];
+    }
+
+    return JOBS.map((job) => {
+        let running = false;
+        const tick = async () => {
+            if (running) return;
+            running = true;
+            try {
+                await withAdvisoryLock({ key: job.lockKey, job: job.run });
+            } catch (error) {
+                monitoring.error(`Job ${job.name} failed`, error as Error);
+            } finally {
+                running = false;
+            }
+        };
+        monitoring.info(`Job ${job.name} scheduled every ${job.intervalMs / 1000}s`);
+        return setInterval(tick, job.intervalMs);
+    });
+};
+
+export default startJobs;

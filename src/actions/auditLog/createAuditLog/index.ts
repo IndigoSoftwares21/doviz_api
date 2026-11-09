@@ -1,14 +1,15 @@
 import { Kysely } from "kysely";
 import { Database } from "@/database/types";
 import { AuditAction } from "@/constants/auditActions";
+import { AuditActorType, AuditEntityType } from "@/constants/auditTargets";
 import insertAuditLog from "./queries/insertAuditLog";
 
 interface ICreateAuditLog {
     trx: Kysely<Database>;
     action: AuditAction;
-    actorType: "anonymous" | "user" | "admin" | "system";
+    actorType: AuditActorType;
     actorId?: string | null;
-    entityType?: string | null;
+    entityType?: AuditEntityType | null;
     entityId?: string | null;
     ipAddress?: string | null;
     userAgent?: string | null;

@@ -13,6 +13,10 @@ jest.mock("@/actions/pinVerification/createPinVerification/queries/selectTransac
 jest.mock("@/actions/pinVerification/createPinVerification/queries/updatePinAttempts");
 jest.mock("@/actions/auditLog/createAuditLog");
 
+// Real cost-12 bcrypt (~250ms each) runs several times per test; under
+// parallel jest workers that can pass the 5s default, so allow more.
+jest.setTimeout(30_000);
+
 const userId = "user-1";
 const args = (pin: string) => ({ userId, pin, ipAddress: "1.2.3.4", userAgent: "jest" });
 let pinHash: string;

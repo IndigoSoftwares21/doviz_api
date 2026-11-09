@@ -1,5 +1,6 @@
 import { Kysely, sql } from "kysely";
 import { Database } from "@/database/types";
+import USER from "@/constants/user";
 
 interface IInsertUser {
     trx: Kysely<Database>;
@@ -16,7 +17,7 @@ const insertUser = async ({ trx, phoneNumber, loggedInAt }: IInsertUser) => {
             phoneNumber,
             phoneVerifiedAt: loggedInAt,
             lastLoginAt: loggedInAt,
-            status: "active",
+            status: USER.STATUS_ACTIVE,
         })
         .onConflict((oc) =>
             oc.column("phoneNumber").doUpdateSet({

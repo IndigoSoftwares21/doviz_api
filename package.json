@@ -20,7 +20,10 @@
     "migrate-up:dry-once": "npx knex migrate:up --env development --dry-run && ts-node scripts/generate-db-types.ts",
     "migrate-down:dry-once": "npx knex migrate:down --env development --dry-run && ts-node scripts/generate-db-types.ts",
     "create:endpoint": "ts-node scripts/create-endpoint.ts",
-    "create:helper": "ts-node scripts/create-helper.ts"
+    "create:helper": "ts-node scripts/create-helper.ts",
+    "crypto:sync": "ts-node -r tsconfig-paths/register scripts/sync-crypto-catalog.ts",
+    "crypto:set-markup": "ts-node -r tsconfig-paths/register scripts/set-conversion-markup.ts",
+    "crypto:mock-deposit": "ts-node -r tsconfig-paths/register scripts/mock-crypto-deposit.ts"
   },
   "keywords": [
     "express",
@@ -36,6 +39,7 @@
     "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.5.0",

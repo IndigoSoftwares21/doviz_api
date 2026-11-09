@@ -4,6 +4,8 @@ import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import createSessionUnlock from "@/actions/sessionUnlock/createSessionUnlock";
 import postSessionUnlockSchema from "./schema/postSessionUnlockSchema";
+import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
+import ACTION_FAILURE from "@/constants/actionFailure";
 
 const SMS_LOGIN_REQUIRED = "Your session has ended. Log in again with an SMS code.";
 
@@ -30,12 +32,12 @@ const postSessionUnlock = async (req: Request, res: Response) => {
         });
 
         // 401 always means "go to SMS login"; 400/423 mean "try again".
-        if (result.failure === "invalid_session") {
+        if (result.failure === ACTION_FAILURE.INVALID_SESSION) {
             return handleError({ res, req, message: SMS_LOGIN_REQUIRED, code: 401 });
         }
 
-        if (result.failure === "pin") {
-            if (result.verification.status === "locked") {
+        if (result.failure === ACTION_FAILURE.PIN) {
+            if (result.verification.status === PIN_VERIFICATION_STATUS.LOCKED) {
                 return handleError({
                     res,
                     req,
@@ -47,7 +49,7 @@ const postSessionUnlock = async (req: Request, res: Response) => {
             return handlePinFailure({ res, req, verification: result.verification });
         }
 
-        if (result.failure === "biometric") {
+        if (result.failure === ACTION_FAILURE.BIOMETRIC) {
             return handleError({
                 res,
                 req,

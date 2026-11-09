@@ -5,6 +5,8 @@ import createAuditLog from "@/actions/auditLog/createAuditLog";
 import hashToken from "@/utils/auth/hashToken";
 import selectRefreshTokenSession from "./queries/selectRefreshTokenSession";
 import updateSessionRevoked from "./queries/updateSessionRevoked";
+import SESSION_REVOKE_REASON from "@/constants/sessionRevokeReason";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface IFetchRefreshSession {
     refreshToken: string;
@@ -33,16 +35,16 @@ const fetchRefreshSession = async ({ refreshToken, deviceId, ipAddress, userAgen
                 trx,
                 sessionId: row.sessionId,
                 revokedAt: now,
-                revokedReason: "refresh_token_reuse",
+                revokedReason: SESSION_REVOKE_REASON.REFRESH_TOKEN_REUSE,
             });
 
             if (revoked) {
                 await createAuditLog({
                     trx,
                     action: AUDIT_ACTIONS.REFRESH_TOKEN_REUSED,
-                    actorType: "user",
+                    actorType: AUDIT_ACTOR_TYPE.USER,
                     actorId: row.userId,
-                    entityType: "auth_session",
+                    entityType: AUDIT_ENTITY_TYPE.AUTH_SESSION,
                     entityId: row.sessionId,
                     ipAddress,
                     userAgent,

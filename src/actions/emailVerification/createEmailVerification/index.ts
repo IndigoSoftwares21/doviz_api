@@ -8,6 +8,7 @@ import getEmailOtpSubject from "@/utils/auth/getEmailOtpSubject";
 import sendEmail from "@/services/email/sendEmail";
 import updateLiveEmailVerifications from "./queries/updateLiveEmailVerifications";
 import insertEmailVerification from "./queries/insertEmailVerification";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateEmailVerification {
     userId: string;
@@ -25,8 +26,14 @@ const createEmailVerification = async ({
     const otp = generateOtp();
     const now = Date.now();
 
-    // Email is sent inside the transaction: if delivery fails, nothing
-    // (including the audit row) is committed.
+    // Send first, then record — no network call inside the transaction. If
+    // sending fails nothing is written and the previous code stays valid.
+    await sendEmail({
+        to: email,
+        subject: "Verify your Doviz email",
+        text: `Your Doviz email verification code is ${otp}. It expires in ${AUTH.EMAIL_OTP_TTL_SECONDS / 60} minutes. If you didn't request this, you can ignore this email. Never share this code with anyone, including Doviz staff.`,
+    });
+
     const data = await withTransaction(async (trx) => {
         await updateLiveEmailVerifications({ trx, userId, revokedAt: new Date(now) });
 
@@ -44,19 +51,13 @@ const createEmailVerification = async ({
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.EMAIL_VERIFICATION_REQUESTED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "email_verification",
+            entityType: AUDIT_ENTITY_TYPE.EMAIL_VERIFICATION,
             entityId: emailVerificationRow.id,
             ipAddress: requestIp,
             userAgent,
             metadata: { email },
-        });
-
-        await sendEmail({
-            to: email,
-            subject: "Verify your Doviz email",
-            text: `Your Doviz email verification code is ${otp}. It expires in ${AUTH.EMAIL_OTP_TTL_SECONDS / 60} minutes. If you didn't request this, you can ignore this email. Never share this code with anyone, including Doviz staff.`,
         });
 
         return {

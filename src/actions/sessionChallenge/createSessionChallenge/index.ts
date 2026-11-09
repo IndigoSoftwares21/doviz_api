@@ -1,6 +1,7 @@
 import AUTH from "@/constants/auth";
 import fetchRefreshSession from "@/actions/refreshSession/fetchRefreshSession";
 import createBiometricChallenge from "@/actions/biometricChallenge/createBiometricChallenge";
+import ACTION_FAILURE from "@/constants/actionFailure";
 
 interface ICreateSessionChallenge {
     refreshToken: string;
@@ -15,7 +16,7 @@ const createSessionChallenge = async ({ refreshToken, deviceId, ipAddress, userA
     const { data: session } = await fetchRefreshSession({ refreshToken, deviceId, ipAddress, userAgent });
 
     if (!session) {
-        return { data: null, failure: "invalid_session" as const };
+        return { data: null, failure: ACTION_FAILURE.INVALID_SESSION };
     }
 
     const { data } = await createBiometricChallenge({
@@ -25,7 +26,7 @@ const createSessionChallenge = async ({ refreshToken, deviceId, ipAddress, userA
     });
 
     if (!data) {
-        return { data: null, failure: "biometrics_off" as const };
+        return { data: null, failure: ACTION_FAILURE.BIOMETRICS_OFF };
     }
 
     return { data, failure: null };

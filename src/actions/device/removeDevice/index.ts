@@ -4,6 +4,8 @@ import createAuditLog from "@/actions/auditLog/createAuditLog";
 import updateDeviceSessionsRevoked from "@/actions/login/createLogin/queries/updateDeviceSessionsRevoked";
 import updateDeviceBiometricKeysRevoked from "@/actions/biometric/removeBiometric/queries/updateDeviceBiometricKeysRevoked";
 import updateUserDeviceRevoked from "./queries/updateUserDeviceRevoked";
+import SESSION_REVOKE_REASON from "@/constants/sessionRevokeReason";
+import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface IRemoveDevice {
     userId: string;
@@ -28,7 +30,7 @@ const removeDevice = async ({ userId, deviceId, ipAddress, userAgent }: IRemoveD
             trx,
             userDeviceId: device.id,
             revokedAt: now,
-            revokedReason: "device_removed",
+            revokedReason: SESSION_REVOKE_REASON.DEVICE_REMOVED,
         });
 
         const revokedKeys = await updateDeviceBiometricKeysRevoked({ trx, userId, deviceId, revokedAt: now });
@@ -36,9 +38,9 @@ const removeDevice = async ({ userId, deviceId, ipAddress, userAgent }: IRemoveD
         await createAuditLog({
             trx,
             action: AUDIT_ACTIONS.DEVICE_REVOKED,
-            actorType: "user",
+            actorType: AUDIT_ACTOR_TYPE.USER,
             actorId: userId,
-            entityType: "user_device",
+            entityType: AUDIT_ENTITY_TYPE.USER_DEVICE,
             entityId: device.id,
             ipAddress,
             userAgent,
