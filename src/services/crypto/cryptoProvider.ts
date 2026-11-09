@@ -44,4 +44,6 @@ export interface CryptoProvider {
     /** True only for an authentic request from this provider. */
     verifyWebhook(request: WebhookRequest): boolean;
     parseWebhook(body: unknown): ProviderWebhookEvent | null;
+    /** True for the provider's "is this URL alive?" ping — answered 200, never stored. */
+    isWebhookPing(body: unknown): boolean;
 }

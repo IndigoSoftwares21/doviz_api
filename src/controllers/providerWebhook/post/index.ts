@@ -28,6 +28,11 @@ const postProviderWebhook = async (req: Request, res: Response) => {
             return handleError({ res, req, message: "Unauthorized", code: 401 });
         }
 
+        // Checked only AFTER verifyWebhook: an unauthenticated ping is still a 401.
+        if (provider.isWebhookPing(req.body)) {
+            return handleSuccess({ res, req, message: "Webhook verified", code: 200, data: { received: true } });
+        }
+
         const event = provider.parseWebhook(req.body);
         if (!event) {
             return handleError({ res, req, message: "Unrecognised webhook", code: 400 });

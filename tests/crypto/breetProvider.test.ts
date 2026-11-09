@@ -9,6 +9,13 @@ const provider = (http: FakeBreetHttp) => new BreetProvider({ client: fakeClient
 const wallet = (n: number, label: string) => ({ id: `w${n}`, label, address: `addr${n}`, identifier: "USDT_TRX_TEST2", asset: "a-usdt" });
 
 describe("BreetProvider", () => {
+    it("recognises only Breet's dashboard verification ping", () => {
+        const breet = provider(new FakeBreetHttp());
+        expect(breet.isWebhookPing({ event: "webhook.verification" })).toBe(true);
+        expect(breet.isWebhookPing({ event: "trade.completed", eventId: "e1" })).toBe(false);
+        expect(breet.isWebhookPing(null)).toBe(false);
+    });
+
     it("generates an address with our label only (no bank / auto-settlement)", async () => {
         const http = new FakeBreetHttp().reply("POST /trades/sell/assets/a-usdt/generate-address", ok({ id: "w1", address: "TV8d" }, 201));
         await expect(provider(http).createDepositAddress({ providerAssetId: "a-usdt", label: "dvz-1" })).resolves.toEqual({

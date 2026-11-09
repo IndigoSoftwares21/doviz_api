@@ -90,6 +90,10 @@ class BreetProvider implements CryptoProvider {
     parseWebhook(body: unknown) {
         return parseBreetWebhook({ body });
     }
+
+    isWebhookPing(body: unknown) {
+        return (body as { event?: unknown } | null)?.event === BREET.VERIFICATION_EVENT;
+    }
 }
 
 export default BreetProvider;

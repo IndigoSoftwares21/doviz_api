@@ -16,6 +16,7 @@ export const makeFakeProvider = (overrides: Partial<CryptoProvider> = {}): Crypt
     getQuote: jest.fn(),
     verifyWebhook: jest.fn().mockReturnValue(true),
     parseWebhook: jest.fn(),
+    isWebhookPing: jest.fn(),
     ...overrides,
 });
 

@@ -13,6 +13,8 @@ const BREET = {
     /** Breet's published webhook sender IPs. */
     WEBHOOK_IPS: ["46.101.201.155", "46.101.225.109", "46.101.225.97", "46.101.225.251", "159.89.20.62"],
     DEPOSIT_EVENTS: ["trade.pending", "trade.completed", "trade.flagged", "trade.deleted"],
+    /** Sent (authenticated, no eventId) when a webhook URL is saved in the dashboard. */
+    VERIFICATION_EVENT: "webhook.verification",
     ENVIRONMENTS: Object.values(PROVIDER_ENVIRONMENT),
 } as const;
 

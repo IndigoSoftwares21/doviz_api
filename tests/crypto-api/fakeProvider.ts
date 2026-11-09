@@ -19,6 +19,7 @@ export const createFakeProvider = () => {
         getQuote: jest.fn(),
         verifyWebhook: jest.fn(),
         parseWebhook: jest.fn(),
+        isWebhookPing: jest.fn().mockReturnValue(false),
     } satisfies CryptoProvider;
     return provider;
 };

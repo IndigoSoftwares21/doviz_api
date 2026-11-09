@@ -42,6 +42,21 @@ describe("POST /webhooks/:provider", () => {
         expect(createProviderWebhookRejection).toHaveBeenCalledWith(expect.objectContaining({ provider: "fakepay" }));
     });
 
+    it("answers an authenticated verification ping with 200 and stores nothing", async () => {
+        jest.mocked(provider.verifyWebhook).mockReturnValue(true);
+        jest.mocked(provider.isWebhookPing).mockReturnValue(true);
+        const response = await request(app.express).post(url).send({ event: "webhook.verification" });
+        expect(response.status).toBe(200);
+        expect(createProviderWebhookEvent).not.toHaveBeenCalled();
+    });
+
+    it("still 401s a ping that fails verification", async () => {
+        jest.mocked(provider.verifyWebhook).mockReturnValue(false);
+        jest.mocked(provider.isWebhookPing).mockReturnValue(true);
+        const response = await request(app.express).post(url).send({ event: "webhook.verification" });
+        expect(response.status).toBe(401);
+    });
+
     it("400s when the body isn't a recognisable event", async () => {
         jest.mocked(provider.parseWebhook).mockReturnValue(null);
         const response = await request(app.express).post(url).send({});
