@@ -20,6 +20,8 @@ const describeStatementEntry = ({
             return "Withdrawal to bank";
         case LEDGER_TRANSACTION_TYPE.WITHDRAWAL_REVERSAL:
             return "Withdrawal refunded";
+        case LEDGER_TRANSACTION_TYPE.WITHDRAWAL_SETTLE:
+            return "Withdrawal fee adjustment";
         case LEDGER_TRANSACTION_TYPE.BILL_HOLD:
             return "Bill payment";
         case LEDGER_TRANSACTION_TYPE.BILL_REVERSAL:

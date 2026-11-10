@@ -1,6 +1,8 @@
 import processWebhookEvent from "@/actions/providerWebhookEvent/processWebhookEvent";
 import providerRegistry from "@/services/crypto/providerRegistry";
 import syncDeposit from "@/actions/deposit/syncDeposit";
+import syncWithdrawal from "@/actions/withdrawal/syncWithdrawal";
+import selectWithdrawalIdByReference from "@/actions/providerWebhookEvent/processWebhookEvent/queries/selectWithdrawalIdByReference";
 import selectWebhookEvent from "@/actions/providerWebhookEvent/processWebhookEvent/queries/selectWebhookEvent";
 import updateWebhookEventAttempt from "@/actions/providerWebhookEvent/processWebhookEvent/queries/updateWebhookEventAttempt";
 import updateWebhookEventResult from "@/actions/providerWebhookEvent/processWebhookEvent/queries/updateWebhookEventResult";
@@ -8,6 +10,8 @@ import { makeFakeProvider } from "./fakeProvider";
 
 jest.mock("@/database", () => ({ db: {} }));
 jest.mock("@/actions/deposit/syncDeposit");
+jest.mock("@/actions/withdrawal/syncWithdrawal");
+jest.mock("@/actions/providerWebhookEvent/processWebhookEvent/queries/selectWithdrawalIdByReference");
 jest.mock("@/actions/providerWebhookEvent/processWebhookEvent/queries/selectWebhookEvent");
 jest.mock("@/actions/providerWebhookEvent/processWebhookEvent/queries/updateWebhookEventAttempt");
 jest.mock("@/actions/providerWebhookEvent/processWebhookEvent/queries/updateWebhookEventResult");
@@ -37,11 +41,24 @@ describe("processWebhookEvent", () => {
         expect(updateWebhookEventResult).toHaveBeenCalledWith({ id: "row-1", status: "processed", lastError: null });
     });
 
-    it("ignores payout events until withdrawals exist", async () => {
+    it("syncs the withdrawal a payout event points at", async () => {
         jest.mocked(provider.parseWebhook).mockReturnValue(parsed("payout"));
+        jest.mocked(selectWithdrawalIdByReference).mockResolvedValue({ id: "withdrawal-1" });
+        jest.mocked(syncWithdrawal).mockResolvedValue({ data: { outcome: "completed" } });
+
+        const { data } = await processWebhookEvent({ id: "row-1" });
+        expect(selectWithdrawalIdByReference).toHaveBeenCalledWith({ provider: "fakepay", reference: "trade-1" });
+        expect(syncWithdrawal).toHaveBeenCalledWith({ withdrawalId: "withdrawal-1" });
+        expect(data.status).toBe("processed");
+        expect(syncDeposit).not.toHaveBeenCalled();
+    });
+
+    it("ignores a payout event for a withdrawal we don't have", async () => {
+        jest.mocked(provider.parseWebhook).mockReturnValue(parsed("payout"));
+        jest.mocked(selectWithdrawalIdByReference).mockResolvedValue(undefined);
         const { data } = await processWebhookEvent({ id: "row-1" });
         expect(data.status).toBe("ignored");
-        expect(syncDeposit).not.toHaveBeenCalled();
+        expect(syncWithdrawal).not.toHaveBeenCalled();
     });
 
     it("records a failure (for the sweeper to retry) with a bounded message", async () => {

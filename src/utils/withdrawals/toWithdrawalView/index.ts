@@ -1,0 +1,41 @@
+import maskAccountNumber from "@/utils/banks/maskAccountNumber";
+
+export interface WithdrawalRow {
+    id: string;
+    status: string;
+    currency: string;
+    amount: string;
+    fee: string | null;
+    feeReserve: string;
+    totalHeld: string;
+    failureReason: string | null;
+    requestedAt: Date;
+    finalizedAt: Date | null;
+    bankAccountId: string;
+    accountNumber: string;
+    accountName: string;
+    bankName: string;
+}
+
+/**
+ * A withdrawal as the app sees it: the bank (masked), what's being sent, and
+ * the fee — the real one once completed, else the reserve held to cover it.
+ * Never a provider name or code.
+ */
+const toWithdrawalView = ({ row }: { row: WithdrawalRow }) => ({
+    id: row.id,
+    status: row.status,
+    bankAccount: { id: row.bankAccountId, bankName: row.bankName, accountNumber: maskAccountNumber({ accountNumber: row.accountNumber }), accountName: row.accountName },
+    currency: row.currency,
+    amount: row.amount,
+    /** The real fee, once completed. */
+    fee: row.status === "completed" ? row.fee : null,
+    /** Held to cover the fee; any unused part is returned at completion. */
+    feeReserve: row.feeReserve,
+    totalHeld: row.totalHeld,
+    failureReason: row.failureReason,
+    createdAt: row.requestedAt,
+    completedAt: row.finalizedAt,
+});
+
+export default toWithdrawalView;

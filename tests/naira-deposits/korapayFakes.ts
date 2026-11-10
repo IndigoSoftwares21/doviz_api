@@ -5,6 +5,7 @@ import { KorapayConfig } from "@/services/collections/providers/korapay/getKorap
 export const TEST_CONFIG: KorapayConfig = {
     baseUrl: "https://korapay.test/merchant/api/v1",
     secretKey: "sk_test_secret_0123456789",
+    publicKey: "pk_test_public-key-0123",
     environment: "sandbox",
     webhookUrl: "https://api.doviz.test/api/v1/webhooks/korapay",
     fallbackCustomerEmail: "deposits@doviz.test",

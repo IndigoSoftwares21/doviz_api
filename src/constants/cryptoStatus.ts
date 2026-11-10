@@ -25,6 +25,12 @@ export const WEBHOOK_EVENT_STATUS = {
     FAILED: "failed",
 } as const;
 
+/** Why we flagged a deposit ourselves (stored in sub_status). */
+export const DEPOSIT_FLAG_REASON = {
+    /** The provider settled it in another currency (e.g. USD): no naira figure to credit — ops reviews it. */
+    NOT_SETTLED_IN_NGN: "not_settled_in_ngn",
+} as const;
+
 /** What syncing one provider deposit did. */
 export const SYNC_OUTCOME = {
     CREDITED: "credited",

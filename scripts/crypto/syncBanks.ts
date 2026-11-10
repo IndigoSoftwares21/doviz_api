@@ -1,9 +1,15 @@
 import { db } from "../../src/database";
-import { CryptoProvider } from "../../src/services/crypto/cryptoProvider";
+import { ProviderBank } from "../../src/services/crypto/types";
 import { ProviderEnvironment } from "../../src/constants/crypto";
 
 /** Upserts the provider's bank list (matched by slug) into the neutral bank table and its mapping. */
-const syncBanks = async ({ provider, environment }: { provider: CryptoProvider; environment: ProviderEnvironment }) => {
+/** Any provider with a bank list (crypto or payout). */
+interface BankListProvider {
+    readonly name: string;
+    listBanks(): Promise<ProviderBank[]>;
+}
+
+const syncBanks = async ({ provider, environment }: { provider: BankListProvider; environment: ProviderEnvironment }) => {
     const banks = await provider.listBanks();
 
     for (const bank of banks) {

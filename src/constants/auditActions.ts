@@ -23,6 +23,7 @@ const AUDIT_ACTIONS = {
     WITHDRAWAL_REQUESTED: "wallet.withdrawal.requested",
     WITHDRAWAL_COMPLETED: "wallet.withdrawal.completed",
     WITHDRAWAL_REFUNDED: "wallet.withdrawal.refunded",
+    PROVIDER_SWITCHED: "ops.provider.switched",
     BILL_PAYMENT_REQUESTED: "bills.payment.requested",
     BILL_PAYMENT_COMPLETED: "bills.payment.completed",
     BILL_PAYMENT_REFUNDED: "bills.payment.refunded",

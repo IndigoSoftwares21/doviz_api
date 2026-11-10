@@ -42,8 +42,23 @@ class KorapayClient {
         this.http = http ?? axiosHttp({ baseUrl: this.config.baseUrl });
     }
 
-    async request<T>({ method, path, body }: { method: KorapayHttpRequest["method"]; path: string; body?: unknown }): Promise<T> {
-        const headers = { Authorization: `Bearer ${this.config.secretKey}`, "Content-Type": "application/json" };
+    /** `useKey: "public"` for the few endpoints Korapay authenticates with the public key (the bank list). */
+    async request<T>({
+        method,
+        path,
+        body,
+        useKey = "secret",
+    }: {
+        method: KorapayHttpRequest["method"];
+        path: string;
+        body?: unknown;
+        useKey?: "secret" | "public";
+    }): Promise<T> {
+        const key = useKey === "public" ? this.config.publicKey : this.config.secretKey;
+        if (!key) {
+            throw new CollectionProviderError({ code: COLLECTION_PROVIDER_ERROR_CODE.CONFIGURATION, status: null, providerMessage: "KORAPAY_PUBLIC_KEY is not set" });
+        }
+        const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 
         let response: { status: number; data: unknown };
         try {

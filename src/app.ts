@@ -8,6 +8,7 @@ import webhookRoutes from "@/routes/webhook.routes";
 import registerCryptoProviders from "@/services/crypto/providers";
 import registerBillProviders from "@/services/bills/providers";
 import registerCollectionProviders from "@/services/collections/providers";
+import registerPayoutProviders from "@/services/payouts/providers";
 import startJobs from "@/jobs/startJobs";
 import startRealtime from "@/services/realtime/startRealtime";
 
@@ -71,6 +72,7 @@ class App {
         registerCryptoProviders();
         registerBillProviders();
         registerCollectionProviders();
+        registerPayoutProviders();
         
         const apiVersion = process.env.API_VERSION || 'v1';
         

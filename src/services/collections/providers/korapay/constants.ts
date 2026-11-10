@@ -11,6 +11,8 @@ const KORAPAY = {
     SIGNATURE_HEADER: "x-korapay-signature",
     /** Charge events: charge.success, charge.failed. */
     CHARGE_EVENT_PREFIX: "charge.",
+    /** Payout events (same webhook URL): transfer.success, transfer.failed. */
+    TRANSFER_EVENT_PREFIX: "transfer.",
 } as const;
 
 export default KORAPAY;

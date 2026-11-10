@@ -5,7 +5,7 @@ import { Database } from "@/database/types";
 const selectDepositForUpdate = async ({ trx, provider, reference }: { trx: Kysely<Database>; provider: string; reference: string }) => {
     const depositRow = await trx
         .selectFrom("crypto_deposits")
-        .select(["id", "status", "lastEventAt"])
+        .select(["id", "status", "subStatus", "lastEventAt"])
         .where("provider", "=", provider)
         .where("providerReference", "=", reference)
         .forUpdate()

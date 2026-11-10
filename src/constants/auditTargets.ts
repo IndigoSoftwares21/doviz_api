@@ -19,6 +19,8 @@ export const AUDIT_ENTITY_TYPE = {
     CRYPTO_DEPOSIT: "crypto_deposit",
     USER_BANK_ACCOUNT: "user_bank_account",
     BILL_PAYMENT: "bill_payment",
+    BANK_WITHDRAWAL: "bank_withdrawal",
+    PROVIDER_SETTING: "provider_setting",
     NAIRA_DEPOSIT: "naira_deposit",
 } as const;
 

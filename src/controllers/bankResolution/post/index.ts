@@ -2,8 +2,7 @@ import { Request, Response } from "express";
 import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import createBankResolution from "@/actions/bankResolution/createBankResolution";
-import providerRegistry from "@/services/crypto/providerRegistry";
-import getProviderEnvironment from "@/utils/crypto/getProviderEnvironment";
+import fetchActivePayoutProvider from "@/actions/payoutProvider/fetchActivePayoutProvider";
 import postBankResolutionSchema from "./schema/postBankResolutionSchema";
 import ACTION_FAILURE from "@/constants/actionFailure";
 
@@ -13,11 +12,12 @@ const postBankResolution = async (req: Request, res: Response) => {
     try {
         const { bankId, accountNumber } = req.body;
         const { id: userId } = req.user!;
+        const { data: provider } = await fetchActivePayoutProvider();
 
         const validated = await postBankResolutionSchema.parseAsync({
             userId,
-            provider: providerRegistry.active().name,
-            environment: getProviderEnvironment(),
+            provider: provider.name,
+            environment: provider.environment,
             bankId,
             accountNumber,
         });

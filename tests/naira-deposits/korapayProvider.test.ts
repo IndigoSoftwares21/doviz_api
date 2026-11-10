@@ -190,7 +190,7 @@ describe("Korapay webhooks", () => {
             resourceId: DEPOSIT_ID,
             eventTime: null,
         });
-        expect(provider.parseWebhook({ event: "transfer.success", data: { reference: "x" } })).toMatchObject({ resourceType: "other" });
+        expect(provider.parseWebhook({ event: "transfer.success", data: { reference: "x" } })).toMatchObject({ resourceType: "payout", resourceId: "x" }); // payouts share the webhook URL
         expect(provider.parseWebhook({ event: "charge.success", data: {} })).toBeNull();
         expect(provider.parseWebhook("nope")).toBeNull();
     });

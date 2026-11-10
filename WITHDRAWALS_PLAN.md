@@ -1,7 +1,6 @@
 # Withdrawals ("Send Money" to your own bank) — provider-agnostic, Korapay first
 
-Status: **planned.** Build starts once the naira deposits work (Korapay collections,
-`NAIRA_DEPOSITS_PLAN.md`) is committed — both share the Korapay client, keys and webhook URL.
+Status: **server built** (Korapay payouts, DB-chosen provider, dynamic fee with reserve, withdrawals API, webhooks, reconciler; 10 money-path tests on real Postgres). Mobile Send Money next.
 
 ## 1. The product
 A user sends naira from their Doviz balance **to a bank account in their own name**:

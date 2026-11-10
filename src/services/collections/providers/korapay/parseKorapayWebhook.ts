@@ -6,7 +6,8 @@ const text = (value: unknown) => (typeof value === "string" && value.trim() ? va
 
 /**
  * Korapay webhook body → neutral event. Null for anything malformed.
- * `data.reference` is OUR reference (the deposit id we sent). Events have no
+ * `data.reference` is OUR reference (the deposit or withdrawal id we sent).
+ * One webhook URL serves both: charge.* are deposits, transfer.* payouts. Events have no
  * id of their own, so the event id is "<reference>:<event>": a redelivery
  * dedupes, a new outcome is a new event.
  */
@@ -22,7 +23,11 @@ const parseKorapayWebhook = ({ body }: { body: unknown }): ProviderWebhookEvent 
     return {
         eventId: `${reference}:${eventName}`.slice(0, 128),
         eventName: eventName.slice(0, 64),
-        resourceType: eventName.startsWith(KORAPAY.CHARGE_EVENT_PREFIX) ? WEBHOOK_RESOURCE_TYPE.NAIRA_DEPOSIT : WEBHOOK_RESOURCE_TYPE.OTHER,
+        resourceType: eventName.startsWith(KORAPAY.CHARGE_EVENT_PREFIX)
+            ? WEBHOOK_RESOURCE_TYPE.NAIRA_DEPOSIT
+            : eventName.startsWith(KORAPAY.TRANSFER_EVENT_PREFIX)
+              ? WEBHOOK_RESOURCE_TYPE.PAYOUT
+              : WEBHOOK_RESOURCE_TYPE.OTHER,
         resourceId: reference.slice(0, 64),
         eventTime: null,
     };

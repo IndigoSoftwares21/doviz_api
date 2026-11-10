@@ -13,7 +13,7 @@ import insertBillPayment from "./queries/insertBillPayment";
 import submitBillPayment from "./utils/submitBillPayment";
 import scheduleBillPaymentChecks from "./utils/scheduleBillPaymentChecks";
 import monitoring from "@/utils/monitoring";
-import isInsufficientBalanceError from "./utils/isInsufficientBalanceError";
+import isInsufficientBalanceError from "@/utils/ledger/isInsufficientBalanceError";
 import isIdempotencyConflictError from "./utils/isIdempotencyConflictError";
 import checkPaymentCustomer from "./utils/checkPaymentCustomer";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";

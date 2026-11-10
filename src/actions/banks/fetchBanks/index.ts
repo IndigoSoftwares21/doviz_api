@@ -1,13 +1,10 @@
-import providerRegistry from "@/services/crypto/providerRegistry";
-import getProviderEnvironment from "@/utils/crypto/getProviderEnvironment";
+import fetchActivePayoutProvider from "@/actions/payoutProvider/fetchActivePayoutProvider";
 import selectPayoutBanks from "./queries/selectPayoutBanks";
 
-/** Banks the active provider can verify accounts for. */
+/** Banks the active PAYOUT provider can look up and pay to (so a linked account can be withdrawn to). */
 const fetchBanks = async () => {
-    const data = await selectPayoutBanks({
-        provider: providerRegistry.active().name,
-        environment: getProviderEnvironment(),
-    });
+    const { data: provider } = await fetchActivePayoutProvider();
+    const data = await selectPayoutBanks({ provider: provider.name, environment: provider.environment });
 
     return { data };
 };

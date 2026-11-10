@@ -2,12 +2,14 @@ import findWebhookReceiver from "@/services/webhooks/findWebhookReceiver";
 import syncDeposit from "@/actions/deposit/syncDeposit";
 import syncBillPayment from "@/actions/billPayment/syncBillPayment";
 import syncNairaDeposit from "@/actions/nairaDeposit/syncNairaDeposit";
+import syncWithdrawal from "@/actions/withdrawal/syncWithdrawal";
 import monitoring from "@/utils/monitoring";
 import selectWebhookEvent from "./queries/selectWebhookEvent";
 import updateWebhookEventAttempt from "./queries/updateWebhookEventAttempt";
 import updateWebhookEventResult from "./queries/updateWebhookEventResult";
 import selectBillPaymentIdByReference from "./queries/selectBillPaymentIdByReference";
 import selectNairaDepositIdByReference from "./queries/selectNairaDepositIdByReference";
+import selectWithdrawalIdByReference from "./queries/selectWithdrawalIdByReference";
 import { SYNC_OUTCOME, WEBHOOK_EVENT_STATUS, WEBHOOK_RESOURCE_TYPE, WebhookEventStatus } from "@/constants/cryptoStatus";
 
 const MAX_ATTEMPTS = 10;
@@ -15,8 +17,8 @@ const MAX_ATTEMPTS = 10;
 /**
  * Processes one stored webhook event. The event only says WHAT changed —
  * syncDeposit / syncBillPayment / syncNairaDeposit re-fetch the provider's own record before
- * any money moves. Payout events are ignored until withdrawals exist; a bill or
- * naira deposit event for a record we don't have is ignored.
+ * any money moves (syncWithdrawal for payouts). An event for a record we
+ * don't have is ignored.
  */
 const processWebhookEvent = async ({ id }: { id: string }) => {
     const event = await selectWebhookEvent({ id });
@@ -49,6 +51,14 @@ const processWebhookEvent = async ({ id }: { id: string }) => {
             const deposit = await selectNairaDepositIdByReference({ provider: event.provider, reference: parsed.resourceId });
             if (deposit) {
                 await syncNairaDeposit({ nairaDepositId: deposit.id });
+                status = WEBHOOK_EVENT_STATUS.PROCESSED;
+            }
+        }
+
+        if (parsed?.resourceType === WEBHOOK_RESOURCE_TYPE.PAYOUT && parsed.resourceId) {
+            const withdrawal = await selectWithdrawalIdByReference({ provider: event.provider, reference: parsed.resourceId });
+            if (withdrawal) {
+                await syncWithdrawal({ withdrawalId: withdrawal.id });
                 status = WEBHOOK_EVENT_STATUS.PROCESSED;
             }
         }

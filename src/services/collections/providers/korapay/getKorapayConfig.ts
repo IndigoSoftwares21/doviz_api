@@ -4,6 +4,8 @@ import KORAPAY from "./constants";
 export interface KorapayConfig {
     baseUrl: string;
     secretKey: string;
+    /** Only some endpoints (the bank list) take the public key; null when not configured. */
+    publicKey: string | null;
     environment: ProviderEnvironment;
     /** Sent as each charge's notification_url: API_PUBLIC_URL + /api/<version>/webhooks/korapay. null = the dashboard's URL. */
     webhookUrl: string | null;
@@ -37,6 +39,7 @@ const getKorapayConfig = (): KorapayConfig => {
     return {
         baseUrl: process.env.KORAPAY_BASE_URL || KORAPAY.DEFAULT_BASE_URL,
         secretKey,
+        publicKey: process.env.KORAPAY_PUBLIC_KEY || null,
         environment: environment as ProviderEnvironment,
         webhookUrl: process.env.API_PUBLIC_URL
             ? `${process.env.API_PUBLIC_URL.replace(/\/+$/, "")}/api/${process.env.API_VERSION || "v1"}/webhooks/${KORAPAY.PROVIDER_NAME}`

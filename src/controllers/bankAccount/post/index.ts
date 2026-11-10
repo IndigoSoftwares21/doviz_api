@@ -3,8 +3,7 @@ import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import createBankAccount from "@/actions/bankAccount/createBankAccount";
-import providerRegistry from "@/services/crypto/providerRegistry";
-import getProviderEnvironment from "@/utils/crypto/getProviderEnvironment";
+import fetchActivePayoutProvider from "@/actions/payoutProvider/fetchActivePayoutProvider";
 import { BANK_LOOKUP_FAILED } from "@/controllers/bankResolution/post";
 import postBankAccountSchema from "./schema/postBankAccountSchema";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
@@ -14,11 +13,12 @@ const postBankAccount = async (req: Request, res: Response) => {
     try {
         const { bankId, accountNumber, pin } = req.body;
         const { id: userId } = req.user!;
+        const { data: provider } = await fetchActivePayoutProvider();
 
         const validated = await postBankAccountSchema.parseAsync({
             userId,
-            provider: providerRegistry.active().name,
-            environment: getProviderEnvironment(),
+            provider: provider.name,
+            environment: provider.environment,
             bankId,
             accountNumber,
             pin,

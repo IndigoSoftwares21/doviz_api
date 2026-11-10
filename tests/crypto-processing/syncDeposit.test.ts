@@ -19,8 +19,8 @@ const args = { provider: "fakepay", reference: "trade-1" };
 
 describe("syncDeposit", () => {
     let provider: ReturnType<typeof makeFakeProvider>;
-    const deposit = (status: string, lastEventAt: Date | null = null) =>
-        jest.mocked(selectDepositForUpdate).mockResolvedValue({ id: "d-1", status, lastEventAt });
+    const deposit = (status: string, lastEventAt: Date | null = null, subStatus: string | null = null) =>
+        jest.mocked(selectDepositForUpdate).mockResolvedValue({ id: "d-1", status, subStatus, lastEventAt });
 
     beforeEach(() => {
         jest.resetAllMocks();
@@ -36,6 +36,22 @@ describe("syncDeposit", () => {
         expect(provider.getDeposit).toHaveBeenCalledWith({ reference: "trade-1" });
         expect(data.outcome).toBe("credited");
         expect(createDepositCredit).toHaveBeenCalledTimes(1);
+    });
+
+    it("flags a deposit settled in another currency once, never credits it, then leaves it alone", async () => {
+        jest.spyOn(console, "error").mockImplementation(() => undefined);
+        jest.mocked(provider.getDeposit).mockResolvedValue(depositRecord({ grossNgn: null, reportedUsd: "20" }));
+        deposit("pending");
+
+        const first = await syncDeposit(args);
+        expect(first.data.outcome).toBe("updated");
+        expect(createDepositCredit).not.toHaveBeenCalled();
+        expect(updateDepositProgress).toHaveBeenCalledWith(expect.objectContaining({ record: expect.objectContaining({ status: "flagged", subStatus: "not_settled_in_ngn" }) }));
+
+        deposit("flagged", null, "not_settled_in_ngn");
+        const again = await syncDeposit(args);
+        expect(again.data.outcome).toBe("unchanged");
+        expect(updateDepositProgress).toHaveBeenCalledTimes(1);
     });
 
     it("never credits twice: an already completed deposit is a no-op", async () => {

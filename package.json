@@ -25,7 +25,9 @@
     "crypto:set-markup": "ts-node -r tsconfig-paths/register scripts/set-conversion-markup.ts",
     "crypto:mock-deposit": "ts-node -r tsconfig-paths/register scripts/mock-crypto-deposit.ts",
     "bills:sync": "ts-node -r tsconfig-paths/register scripts/sync-bill-catalog.ts",
-    "bills:review": "ts-node -r tsconfig-paths/register scripts/review-bill-billers.ts"
+    "bills:review": "ts-node -r tsconfig-paths/register scripts/review-bill-billers.ts",
+    "payouts:sync-banks": "ts-node -r tsconfig-paths/register scripts/sync-payout-banks.ts",
+    "payouts:use": "ts-node -r tsconfig-paths/register scripts/use-payout-provider.ts"
   },
   "keywords": [
     "express",

@@ -1,4 +1,4 @@
-import { DepositStatus, WithdrawalStatus } from "@/constants/crypto";
+import { DepositStatus } from "@/constants/crypto";
 import { WebhookResourceType } from "@/constants/cryptoStatus";
 
 /**
@@ -49,15 +49,6 @@ export interface ProviderDeposit {
     confirmations: number | null;
     amlPassed: boolean | null;
     occurredAt: Date;
-}
-
-export interface ProviderPayout {
-    reference: string;
-    externalId: string | null;
-    status: WithdrawalStatus;
-    amountNgn: string;
-    feeNgn: string | null;
-    failureReason: string | null;
 }
 
 export interface ProviderQuote {

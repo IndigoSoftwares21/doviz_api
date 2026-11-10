@@ -15,6 +15,8 @@ const ACTION_FAILURE = {
     CUSTOMER_NOT_FOUND: "customer_not_found",
     INSUFFICIENT_BALANCE: "insufficient_balance",
     AMOUNT_OUT_OF_RANGE: "amount_out_of_range",
+    BANK_UNSUPPORTED: "bank_unsupported",
+    QUOTE_CHANGED: "quote_changed",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

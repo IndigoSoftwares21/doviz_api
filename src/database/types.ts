@@ -61,6 +61,11 @@ export interface Database {
     finalizedAt: ColumnType<Date | null>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    environment: ColumnType<string>;
+    idempotencyKey: ColumnType<string>;
+    feeReserve: ColumnType<string>;
+    totalHeld: ColumnType<string>;
+    providerBankCode: ColumnType<string>;
   };
 
   bill_categories: {
@@ -381,6 +386,12 @@ export interface Database {
     environment: ColumnType<string>;
     providerBankId: ColumnType<string>;
     syncedAt: ColumnType<Date | null>;
+  };
+
+  provider_settings: {
+    service: ColumnType<string>;
+    activeProvider: ColumnType<string>;
+    updatedAt: Generated<Date>;
   };
 
   provider_webhook_events: {

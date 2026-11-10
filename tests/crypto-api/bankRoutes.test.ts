@@ -5,7 +5,7 @@ import selectUserLegalName from "@/schemaHelpers/selectUserLegalName";
 import selectActiveBankAccountByNumber from "@/schemaHelpers/selectActiveBankAccountByNumber";
 import createBankResolution from "@/actions/bankResolution/createBankResolution";
 import createBankAccount from "@/actions/bankAccount/createBankAccount";
-import { useFakeProvider } from "./fakeProvider";
+import { useFakePayoutProvider } from "../payouts/fakePayoutProvider";
 import { BANK_ID, authHeader, createTestApp } from "./testApp";
 
 jest.mock("@/database", () => ({ db: {}, withTransaction: jest.fn() }));
@@ -15,6 +15,7 @@ jest.mock("@/schemaHelpers/selectUserLegalName");
 jest.mock("@/schemaHelpers/selectActiveBankAccountByNumber");
 jest.mock("@/actions/bankResolution/createBankResolution");
 jest.mock("@/actions/bankAccount/createBankAccount");
+jest.mock("@/actions/payoutProvider/fetchActivePayoutProvider/queries/selectActivePayoutProviderName");
 
 const app = createTestApp();
 const post = (path: string, body: object) => request(app).post(`/api/v1/app${path}`).set("Authorization", authHeader()).send(body);
@@ -24,7 +25,7 @@ const verified = { status: "verified" as const };
 describe("bank routes", () => {
     beforeEach(() => {
         jest.resetAllMocks();
-        useFakeProvider();
+        useFakePayoutProvider();
         jest.mocked(selectActiveSession).mockResolvedValue({ id: "session-1", deviceId: "d-1", accountStatus: "active" });
         jest.mocked(selectUserLegalName).mockResolvedValue({ firstName: "Adaeze", lastName: "Okafor", hasPin: true });
         jest.mocked(selectProviderBank).mockResolvedValue({ id: BANK_ID, name: "GTBank", code: "058", providerBankId: "39" });
