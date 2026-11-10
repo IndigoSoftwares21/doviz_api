@@ -6,6 +6,7 @@ import appRoutes from "@/routes/app.routes";
 import docsRoutes from "@/routes/docs.routes";
 import webhookRoutes from "@/routes/webhook.routes";
 import registerCryptoProviders from "@/services/crypto/providers";
+import registerBillProviders from "@/services/bills/providers";
 import startJobs from "@/jobs/startJobs";
 
 import dotenv from "dotenv";
@@ -64,8 +65,9 @@ class App {
     private initializeRoutes(): void {
         monitoring.info("Initializing routes");
 
-        // Crypto/payout providers must be registered before any route uses them.
+        // Crypto/payout/bill providers must be registered before any route uses them.
         registerCryptoProviders();
+        registerBillProviders();
         
         const apiVersion = process.env.API_VERSION || 'v1';
         

@@ -37,4 +37,11 @@ describe("describeStatementEntry", () => {
         expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT, symbol: null, cryptoAmount: null }))
             .toBe("Crypto converted to naira");
     });
+
+    it("labels bill payments and their refunds", () => {
+        expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.BILL_HOLD, symbol: null, cryptoAmount: null }))
+            .toBe("Bill payment");
+        expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.BILL_REVERSAL, symbol: null, cryptoAmount: null }))
+            .toBe("Bill payment refunded");
+    });
 });

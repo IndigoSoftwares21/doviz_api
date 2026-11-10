@@ -23,7 +23,9 @@
     "create:helper": "ts-node scripts/create-helper.ts",
     "crypto:sync": "ts-node -r tsconfig-paths/register scripts/sync-crypto-catalog.ts",
     "crypto:set-markup": "ts-node -r tsconfig-paths/register scripts/set-conversion-markup.ts",
-    "crypto:mock-deposit": "ts-node -r tsconfig-paths/register scripts/mock-crypto-deposit.ts"
+    "crypto:mock-deposit": "ts-node -r tsconfig-paths/register scripts/mock-crypto-deposit.ts",
+    "bills:sync": "ts-node -r tsconfig-paths/register scripts/sync-bill-catalog.ts",
+    "bills:review": "ts-node -r tsconfig-paths/register scripts/review-bill-billers.ts"
   },
   "keywords": [
     "express",

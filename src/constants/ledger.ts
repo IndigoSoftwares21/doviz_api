@@ -4,6 +4,8 @@ export const LEDGER_ACCOUNT_KIND = {
     PROVIDER_CLEARING: "provider_clearing",
     PAYOUTS_IN_TRANSIT: "payouts_in_transit",
     MARKUP_REVENUE: "markup_revenue",
+    BILLS_IN_TRANSIT: "bills_in_transit",
+    BILL_REVENUE: "bill_revenue",
 } as const;
 
 export const LEDGER_TRANSACTION_TYPE = {
@@ -11,6 +13,9 @@ export const LEDGER_TRANSACTION_TYPE = {
     WITHDRAWAL_HOLD: "withdrawal_hold",
     WITHDRAWAL_SETTLE: "withdrawal_settle",
     WITHDRAWAL_REVERSAL: "withdrawal_reversal",
+    BILL_HOLD: "bill_hold",
+    BILL_SETTLE: "bill_settle",
+    BILL_REVERSAL: "bill_reversal",
 } as const;
 
 export type LedgerAccountKind = (typeof LEDGER_ACCOUNT_KIND)[keyof typeof LEDGER_ACCOUNT_KIND];

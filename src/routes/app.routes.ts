@@ -7,6 +7,7 @@ import cryptoRoutes from "@/routes/crypto.routes";
 import walletRoutes from "@/routes/wallet.routes";
 import bankRoutes from "@/routes/bank.routes";
 import bankAccountRoutes from "@/routes/bankAccount.routes";
+import billRoutes from "@/routes/bill.routes";
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/user", userRoutes);
 router.use("/crypto", cryptoRoutes);
 router.use("/wallet", walletRoutes);
 router.use("/banks", bankRoutes);
+router.use("/bills", billRoutes);
 
 export default router;

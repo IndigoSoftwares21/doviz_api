@@ -16,6 +16,8 @@ interface ICreateLedgerPosting {
     type: LedgerTransactionType;
     description: string;
     metadata?: Record<string, unknown>;
+    /** Every entry's currency. Defaults to naira, the only user balance today. */
+    currency?: string;
     entries: { account: LedgerAccountRef; amount: string }[];
 }
 
@@ -24,7 +26,15 @@ interface ICreateLedgerPosting {
  * zero; the database enforces the same (plus no overdrafts, append-only,
  * idempotency) at COMMIT — this check just fails fast with a clear error.
  */
-const createLedgerPosting = async ({ trx, idempotencyKey, type, description, metadata = {}, entries }: ICreateLedgerPosting) => {
+const createLedgerPosting = async ({
+    trx,
+    idempotencyKey,
+    type,
+    description,
+    metadata = {},
+    currency = CRYPTO.CURRENCY,
+    entries,
+}: ICreateLedgerPosting) => {
     const total = entries.reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
     if (entries.length < 2 || !total.isZero()) {
         throw new Error(`Ledger posting ${idempotencyKey} must have >= 2 entries summing to zero`);
@@ -33,12 +43,12 @@ const createLedgerPosting = async ({ trx, idempotencyKey, type, description, met
     const transaction = await insertLedgerTransaction({ trx, idempotencyKey, type, description, metadata });
 
     for (const entry of entries) {
-        const account = await ensureLedgerAccount({ trx, account: entry.account, currency: CRYPTO.CURRENCY });
+        const account = await ensureLedgerAccount({ trx, account: entry.account, currency });
         await insertLedgerEntry({
             trx,
             transactionId: transaction.id,
             accountId: account.id,
-            currency: CRYPTO.CURRENCY,
+            currency,
             amount: entry.amount,
         });
     }

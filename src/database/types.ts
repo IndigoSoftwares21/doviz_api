@@ -63,6 +63,99 @@ export interface Database {
     updatedAt: Generated<Date>;
   };
 
+  bill_categories: {
+    code: ColumnType<string>;
+    name: ColumnType<string>;
+    sortOrder: ColumnType<number>;
+    isEnabled: ColumnType<boolean>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  bill_payments: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    productId: ColumnType<string>;
+    billerId: ColumnType<string>;
+    provider: ColumnType<string>;
+    providerReference: ColumnType<string | null>;
+    idempotencyKey: ColumnType<string>;
+    customerId: ColumnType<string>;
+    customerName: ColumnType<string | null>;
+    currency: ColumnType<string>;
+    amount: ColumnType<string>;
+    serviceFee: ColumnType<string>;
+    total: ColumnType<string>;
+    providerCost: ColumnType<string | null>;
+    status: ColumnType<string>;
+    token: ColumnType<string | null>;
+    failureReason: ColumnType<string | null>;
+    holdLedgerTransactionId: ColumnType<string>;
+    finalLedgerTransactionId: ColumnType<string | null>;
+    requestedAt: Generated<Date>;
+    finalizedAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  bill_products: {
+    id: Generated<string>;
+    billerProviderRefId: ColumnType<string>;
+    provider: ColumnType<string>;
+    environment: ColumnType<string>;
+    providerProductRef: ColumnType<string>;
+    providerName: ColumnType<string>;
+    name: ColumnType<string>;
+    displayName: ColumnType<string | null>;
+    amountType: ColumnType<string>;
+    currency: ColumnType<string>;
+    price: ColumnType<string | null>;
+    minAmount: ColumnType<string | null>;
+    maxAmount: ColumnType<string | null>;
+    serviceFee: ColumnType<string>;
+    validityDays: ColumnType<number | null>;
+    isAvailable: ColumnType<boolean>;
+    isEnabled: ColumnType<boolean>;
+    syncedAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  biller_provider_refs: {
+    id: Generated<string>;
+    billerId: ColumnType<string | null>;
+    provider: ColumnType<string>;
+    environment: ColumnType<string>;
+    providerBillerRef: ColumnType<string>;
+    providerName: ColumnType<string>;
+    providerCategory: ColumnType<string | null>;
+    providerCustomerIdLabel: ColumnType<string | null>;
+    providerLogoUrl: ColumnType<string | null>;
+    status: ColumnType<string>;
+    matchReason: ColumnType<string | null>;
+    isAvailable: ColumnType<boolean>;
+    reviewedAt: ColumnType<Date | null>;
+    syncedAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  billers: {
+    id: Generated<string>;
+    categoryCode: ColumnType<string>;
+    slug: ColumnType<string>;
+    name: ColumnType<string>;
+    logoUrl: ColumnType<string | null>;
+    customerIdLabel: ColumnType<string>;
+    customerIdPattern: ColumnType<string | null>;
+    requiresValidation: ColumnType<boolean>;
+    matchKeywords: ColumnType<string[]>;
+    sortOrder: ColumnType<number>;
+    isEnabled: ColumnType<boolean>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
   biometric_challenges: {
     id: Generated<string>;
     userId: ColumnType<string>;

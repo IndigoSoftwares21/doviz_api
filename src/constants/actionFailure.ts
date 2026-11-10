@@ -12,6 +12,7 @@ const ACTION_FAILURE = {
     NAME_MISMATCH: "name_mismatch",
     MARKUP_MISSING: "markup_missing",
     PROVIDER_UNAVAILABLE: "provider_unavailable",
+    CUSTOMER_NOT_FOUND: "customer_not_found",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];
