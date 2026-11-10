@@ -6,10 +6,22 @@ import { Money, ProviderBillPayment, ProviderCustomer } from "../../types";
 import FLUTTERWAVE from "./constants";
 import FlutterwaveClient from "./flutterwaveClient";
 import { parseFlutterwaveProductRef } from "./flutterwaveProductRef";
-import { FlutterwaveBillItem, FlutterwaveBillPaymentCreated, FlutterwaveBillStatus, FlutterwaveCustomerValidation } from "./flutterwaveTypes";
+import {
+    FlutterwaveBillCategory,
+    FlutterwaveBiller,
+    FlutterwaveBillerItem,
+    FlutterwaveBillItem,
+    FlutterwaveBillPaymentCreated,
+    FlutterwaveBillStatus,
+    FlutterwaveCustomerValidation,
+} from "./flutterwaveTypes";
 import mapFlutterwaveBillPayment from "./mapFlutterwaveBillPayment";
 import mapFlutterwaveCatalog from "./mapFlutterwaveCatalog";
+import mapFlutterwaveBillerCatalog, { FlutterwaveBillerGroup } from "./mapFlutterwaveBillerCatalog";
 import toFlutterwaveMoney from "./toFlutterwaveMoney";
+import verifyFlutterwaveWebhook from "./verifyFlutterwaveWebhook";
+import parseFlutterwaveWebhook from "./parseFlutterwaveWebhook";
+import { WebhookRequest } from "@/services/crypto/cryptoProvider";
 
 const isNotFound = (error: unknown) =>
     error instanceof BillProviderError &&
@@ -26,13 +38,43 @@ class FlutterwaveBillProvider implements BillProvider {
         this.environment = this.client.environment;
     }
 
+    /**
+     * Per category → billers → items: clean biller names and Flutterwave's own
+     * category for each. Falls back to the flat /bill-categories list only when
+     * those endpoints are refused for setup reasons (e.g. a sandbox account
+     * without IP whitelisting), since the flat list mixes up item and biller names.
+     */
     async listCatalog() {
-        const items = await this.client.request<FlutterwaveBillItem[]>({
-            method: "GET",
-            path: "/bill-categories",
-            params: { country: FLUTTERWAVE.COUNTRY },
-        });
-        return mapFlutterwaveCatalog({ items: items ?? [] });
+        try {
+            return await this.listCatalogByBiller();
+        } catch (error) {
+            if (!(error instanceof BillProviderError && error.code === BILL_PROVIDER_ERROR_CODE.CONFIGURATION)) throw error;
+            const items = await this.client.request<FlutterwaveBillItem[]>({
+                method: "GET",
+                path: "/bill-categories",
+                params: { country: FLUTTERWAVE.COUNTRY },
+            });
+            return mapFlutterwaveCatalog({ items: items ?? [] });
+        }
+    }
+
+    private async listCatalogByBiller() {
+        const params = { country: FLUTTERWAVE.COUNTRY };
+        const categories = await this.client.request<FlutterwaveBillCategory[]>({ method: "GET", path: "/top-bill-categories", params });
+
+        const groups: FlutterwaveBillerGroup[] = [];
+        for (const category of categories ?? []) {
+            const ours = FLUTTERWAVE.CATEGORY_MAP[category.code];
+            if (!ours) continue;
+            const path = `/bills/${encodeURIComponent(category.code)}/billers`;
+            const billers = await this.client.request<FlutterwaveBiller[]>({ method: "GET", path, params });
+            for (const biller of billers ?? []) {
+                const itemsPath = `/billers/${encodeURIComponent(biller.biller_code)}/items`;
+                const items = await this.client.request<FlutterwaveBillerItem[]>({ method: "GET", path: itemsPath });
+                groups.push({ category: ours, biller, items: items ?? [] });
+            }
+        }
+        return mapFlutterwaveBillerCatalog({ groups });
     }
 
     async validateCustomer({ providerProductRef, customerId }: { providerProductRef: string; customerId: string }): Promise<ProviderCustomer> {
@@ -119,6 +161,19 @@ class FlutterwaveBillProvider implements BillProvider {
             }
         }
         return null;
+    }
+
+    verifyWebhook(request: WebhookRequest) {
+        return verifyFlutterwaveWebhook({ request });
+    }
+
+    parseWebhook(body: unknown) {
+        return parseFlutterwaveWebhook({ body });
+    }
+
+    /** Flutterwave doesn't ping webhook URLs. */
+    isWebhookPing() {
+        return false;
     }
 }
 

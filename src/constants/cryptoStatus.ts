@@ -37,6 +37,7 @@ export const SYNC_OUTCOME = {
 export const WEBHOOK_RESOURCE_TYPE = {
     DEPOSIT: "deposit",
     PAYOUT: "payout",
+    BILL_PAYMENT: "bill_payment",
     OTHER: "other",
 } as const;
 

@@ -1,27 +1,18 @@
 import { z } from "zod";
 import selectListableBillProduct from "@/schemaHelpers/selectListableBillProduct";
+import billCustomerIdSchema, { isBillCustomerIdShape } from "@/utils/validation/billCustomerIdSchema";
 
-// provider/environment from the active bill provider. Spaces and dashes in the
-// customer id are dropped ("0803 829 1822" → "08038291822").
+// provider/environment from the active bill provider.
 const postBillCustomerValidationSchema = z
     .object({
         provider: z.string(),
         environment: z.string(),
         productId: z.string({ required_error: "Product is required" }).uuid("Invalid product"),
-        customerId: z
-            .string({ required_error: "Customer number is required" })
-            .transform((value) => value.replace(/[\s-]/g, ""))
-            .pipe(
-                z
-                    .string()
-                    .min(4, "Customer number is too short")
-                    .max(64, "Customer number is too long")
-                    .regex(/^[A-Za-z0-9]+$/, "Customer number can only contain letters and digits"),
-            ),
+        customerId: billCustomerIdSchema,
     })
     .superRefine(async (values, ctx) => {
         if (!z.string().uuid().safeParse(values.productId).success) return;
-        if (!/^[A-Za-z0-9]{4,64}$/.test(values.customerId)) return; // already reported above
+        if (!isBillCustomerIdShape({ value: values.customerId })) return; // already reported above
 
         const product = await selectListableBillProduct({ productId: values.productId, provider: values.provider, environment: values.environment });
         if (!product) {

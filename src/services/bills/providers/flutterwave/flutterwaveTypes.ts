@@ -1,8 +1,38 @@
 /**
  * Flutterwave v3 bill API shapes (snake_case, as sent). Only fields we read.
- * Catalog item shape verified against the sandbox (GET /bill-categories, Nov 2026);
- * validate / payment / status shapes are from the docs until verified.
+ * Catalog shapes verified against sandbox and live (Nov 2026); validate /
+ * payment / status shapes are from the docs until verified.
  */
+
+/** GET /top-bill-categories */
+export interface FlutterwaveBillCategory {
+    code: string;
+    name: string;
+}
+
+/** GET /bills/{category}/billers */
+export interface FlutterwaveBiller {
+    biller_code: string;
+    name: string;
+    short_name?: string | null;
+    logo?: string | null;
+}
+
+/**
+ * GET /billers/{biller_code}/items — here `name` is the ITEM's name and
+ * `biller_name` the biller's (the flat /bill-categories list is inconsistent
+ * about which is which, so the per-biller endpoint is preferred).
+ */
+export interface FlutterwaveBillerItem {
+    id: number;
+    biller_code: string;
+    name: string;
+    item_code: string;
+    country: string;
+    label_name: string | null;
+    amount: number;
+    validity_period?: string | number | null;
+}
 
 export interface FlutterwaveBillItem {
     id: number;

@@ -71,16 +71,67 @@ describe("getFlutterwaveConfig", () => {
     });
 });
 
+describe("FlutterwaveBillProvider.listCatalog by biller (live shapes)", () => {
+    const item = (id: number, biller: string, code: string, name: string, amount: number, label = "Mobile Number") =>
+        ({ id, biller_code: biller, name, biller_name: "IGNORED", item_code: code, country: "NG", label_name: label, amount, fee: 0, validity_period: null });
+
+    const live = () =>
+        new FakeFlutterwaveHttp()
+            .reply("GET /top-bill-categories", ok([{ code: "AIRTIME", name: "Airtime" }, { code: "CABLEBILLS", name: "Cable" }, { code: "TAX", name: "Tax" }]))
+            .reply("GET /bills/AIRTIME/billers", ok([{ biller_code: "BIL099", name: "MTN Nigeria", logo: null }]))
+            .reply("GET /bills/CABLEBILLS/billers", ok([{ biller_code: "BIL121", name: "DSTV", logo: "https://cdn.example/dstv.png" }]))
+            .reply("GET /billers/BIL099/items", ok([item(1, "BIL099", "AT099", "MTN VTU", 0)]))
+            .reply("GET /billers/BIL121/items", ok([
+                item(10, "BIL121", "CB547", "Asian + HD/ExtraView", 11700, "SmartCard Number"),
+                item(11, "BIL121", "CB547", "Asian + HD/ExtraView", 11700, "SmartCard Number"),
+            ]));
+
+    it("takes biller names and categories from Flutterwave's biller endpoints", async () => {
+        const http = live();
+        const catalog = await fakeProvider(http).listCatalog();
+
+        expect(catalog.billers).toEqual([
+            { providerBillerRef: "BIL099", name: "MTN Nigeria", categoryHint: "airtime", customerIdLabel: "Mobile Number", logoUrl: null },
+            { providerBillerRef: "BIL121", name: "DSTV", categoryHint: "cable_tv", customerIdLabel: "SmartCard Number", logoUrl: "https://cdn.example/dstv.png" },
+        ]);
+        expect(catalog.products).toEqual([
+            expect.objectContaining({ providerProductRef: "BIL099:AT099", name: "MTN VTU", amountType: "range" }),
+            expect.objectContaining({ providerProductRef: "BIL121:CB547", name: "Asian + HD/ExtraView", amountType: "fixed", price: "11700.00" }),
+        ]);
+    });
+
+    it("never fetches billers in categories that aren't ours", async () => {
+        const http = live();
+        await fakeProvider(http).listCatalog();
+        expect(http.requests.map((request) => request.url)).not.toContain("/bills/TAX/billers");
+    });
+
+    it("falls back to the flat list when the biller endpoints are refused for setup reasons", async () => {
+        const http = new FakeFlutterwaveHttp()
+            .reply("GET /top-bill-categories", fail(400, "Please enable IP Whitelisting to access this service"))
+            .reply("GET /bill-categories", { status: 200, data: catalogFixture });
+        const catalog = await fakeProvider(http).listCatalog();
+        expect(catalog.billers.length).toBeGreaterThan(0);
+    });
+
+    it("doesn't hide other failures behind the fallback", async () => {
+        const http = new FakeFlutterwaveHttp().reply("GET /top-bill-categories", fail(503, "down"));
+        await expect(fakeProvider(http).listCatalog()).rejects.toMatchObject({ code: "unavailable" });
+    });
+});
+
 describe("FlutterwaveBillProvider.listCatalog (recorded sandbox response)", () => {
     const load = async () => {
-        const http = new FakeFlutterwaveHttp().reply("GET /bill-categories", { status: 200, data: catalogFixture });
+        const http = new FakeFlutterwaveHttp()
+            .reply("GET /top-bill-categories", fail(400, "Please enable IP Whitelisting to access this service"))
+            .reply("GET /bill-categories", { status: 200, data: catalogFixture });
         const catalog = await fakeProvider(http).listCatalog();
         return { catalog, http };
     };
 
     it("asks for Nigerian bills only", async () => {
         const { http } = await load();
-        expect(http.requests[0].params).toEqual({ country: "NG" });
+        expect(http.requests.every((request) => request.params?.country === "NG")).toBe(true);
     });
 
     it("keys products by biller AND item code, since item codes repeat across billers", async () => {
@@ -169,8 +220,24 @@ describe("FlutterwaveBillProvider payments", () => {
         );
         const payment = await fakeProvider(http).getBillPayment({ externalId, providerReference: "CF-FLYAPI-2" });
 
-        expect(payment).toMatchObject({ status: "completed", token: "TOKEN1147XXXX5707123", amount: NGN("24900.00"), cost: NGN("25000.00") });
+        // Cost comes from this payment's own fee and commission: 24,900 + 100 − 30.
+        expect(payment).toMatchObject({ status: "completed", token: "TOKEN1147XXXX5707123", amount: NGN("24900.00"), cost: NGN("24970.00") });
         expect(http.requests[0].params).toEqual({ verbose: 1 });
+    });
+
+    it("nets this payment's commission off its cost (recorded live: ₦100 MTN airtime, commission 3)", async () => {
+        const http = new FakeFlutterwaveHttp().reply(
+            "GET /bills/CF-FLYAPI-20261110050655648999686",
+            ok({ currency: "NGN", amount: "100.00", fee: 0, commission: 3, customer_reference: externalId, flw_ref: "BPUSSD17943304191257382357",
+                tx_ref: "CF-FLYAPI-20261110050655648999686", extra: null, status: "successful", code: "200" }),
+        );
+        const payment = await fakeProvider(http).getBillPayment({ externalId, providerReference: "CF-FLYAPI-20261110050655648999686" });
+        expect(payment).toMatchObject({ status: "completed", amount: NGN("100.00"), cost: NGN("97.00"), token: null, providerReference: "CF-FLYAPI-20261110050655648999686" });
+    });
+
+    it("leaves cost unknown when the record has no fee or commission", async () => {
+        const http = new FakeFlutterwaveHttp().reply("GET /bills/CF-3", ok({ amount: "500.00", status: "successful" }));
+        await expect(fakeProvider(http).getBillPayment({ externalId, providerReference: "CF-3" })).resolves.toMatchObject({ cost: null });
     });
 
     it("falls back to our reference, and returns null when Flutterwave has no record", async () => {

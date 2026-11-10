@@ -11,6 +11,9 @@ export const makeFakeBillProvider = (overrides: Partial<BillProvider> = {}): Bil
     validateCustomer: jest.fn(),
     payBill: jest.fn(),
     getBillPayment: jest.fn().mockResolvedValue(null),
+    verifyWebhook: jest.fn().mockReturnValue(true),
+    parseWebhook: jest.fn().mockReturnValue(null),
+    isWebhookPing: jest.fn().mockReturnValue(false),
     ...overrides,
 });
 

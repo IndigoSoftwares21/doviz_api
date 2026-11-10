@@ -1,13 +1,22 @@
 import { db } from "@/database";
 import { BILLER_LINK_STATUS } from "@/constants/bills";
 
-/** A product the given provider can sell right now, with its biller's customer-id rules. */
+/** A product the given provider can sell right now, with its biller's customer-id rules and its price rules. */
 const selectListableBillProduct = async ({ productId, provider, environment }: { productId: string; provider: string; environment: string }) => {
     const productRow = await db
         .selectFrom("bill_products")
         .innerJoin("biller_provider_refs", "biller_provider_refs.id", "bill_products.billerProviderRefId")
         .innerJoin("billers", "billers.id", "biller_provider_refs.billerId")
-        .select(["bill_products.id", "billers.customerIdLabel", "billers.customerIdPattern"])
+        .select([
+            "bill_products.id",
+            "bill_products.amountType",
+            "bill_products.currency",
+            "bill_products.price",
+            "bill_products.minAmount",
+            "bill_products.maxAmount",
+            "billers.customerIdLabel",
+            "billers.customerIdPattern",
+        ])
         .where("bill_products.id", "=", productId)
         .where("bill_products.provider", "=", provider)
         .where("bill_products.environment", "=", environment)

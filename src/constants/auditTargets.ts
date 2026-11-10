@@ -18,6 +18,7 @@ export const AUDIT_ENTITY_TYPE = {
     CRYPTO_WALLET: "crypto_wallet",
     CRYPTO_DEPOSIT: "crypto_deposit",
     USER_BANK_ACCOUNT: "user_bank_account",
+    BILL_PAYMENT: "bill_payment",
 } as const;
 
 export type AuditActorType = (typeof AUDIT_ACTOR_TYPE)[keyof typeof AUDIT_ACTOR_TYPE];

@@ -22,7 +22,14 @@ export const billTags = [
         name: "Bills",
         description: `Airtime, data, electricity, cable TV and internet, paid from the user's naira balance.
 
-**Flow:** categories → billers in a category → a biller's products → (if \`requiresValidation\`) validate the customer number → pay.
+**Flow:** categories → billers in a category → a biller's products → (if \`requiresValidation\`) validate the customer number → pay → poll the payment until it's \`completed\` or \`failed\`.
+
+**Paying:** \`POST /bills/payments\` takes the money from the user's naira balance at once and sends the payment to the biller. It comes back \`pending\`; poll \`GET /bills/payments/{id}\` every few seconds until it's final:
+- \`completed\` — delivered. For prepaid electricity, show \`token\`.
+- \`failed\` — not delivered; the full \`total\` has already been returned to the balance. Show \`failureReason\`.
+- \`processing\` — the biller hasn't answered yet; keep polling (it can take minutes). Money is never refunded on a guess.
+
+Send a new UUID \`idempotencyKey\` for each payment and **reuse it when retrying** after a timeout or network error — the retry returns the original payment instead of paying twice.
 
 - Every id and name here is Doviz's own — the same whichever bill provider is behind it, so the app never changes when the provider does.
 - A product's \`amountType\` is \`fixed\` (pay exactly \`price\`, e.g. a data bundle) or \`range\` (any amount from \`minAmount\` to \`maxAmount\`, e.g. airtime or electricity). The user is charged the amount plus \`serviceFee\`.
@@ -30,6 +37,29 @@ export const billTags = [
 - Lists only contain what can be bought right now; they can change between calls, so don't cache them for long.`,
     },
 ];
+
+const billPayment = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        status: { type: "string", enum: ["pending", "processing", "completed", "failed"] },
+        biller: { type: "object", properties: {
+            id: { type: "string", format: "uuid" }, name: { type: "string", example: "Ikeja Electric (IKEDC)" }, category: categoryCode,
+            logoUrl: { type: ["string", "null"], format: "uri" },
+        } },
+        product: { type: "object", properties: { id: { type: "string", format: "uuid" }, name: { type: "string", example: "Prepaid" } } },
+        customerId: { type: "string", example: "45067198783" },
+        customerName: { type: ["string", "null"], example: null },
+        currency: { type: "string", example: "NGN" },
+        amount: money("5000.00", "Paid to the biller."),
+        serviceFee: money("0.00"),
+        total: money("5000.00", "Taken from the balance (amount + serviceFee)."),
+        token: { type: ["string", "null"], example: "1234-5678-9012-3456-7890", description: "Prepaid electricity token / PIN. Only once completed." },
+        failureReason: { type: ["string", "null"], example: null, description: "Shown to the user when failed." },
+        createdAt: { type: "string", format: "date-time" },
+        completedAt: { type: ["string", "null"], format: "date-time", description: "When it became completed or failed." },
+    },
+};
 
 const billPaths = {
     "/bills/categories": {
@@ -91,6 +121,24 @@ const billPaths = {
             },
         },
     },
+    "/bills/networks/detect": {
+        get: {
+            tags: ["Bills"], summary: "Detect a phone number's network", operationId: "getBillNetwork", security: auth,
+            description: "Guesses the mobile network from the number's prefix and returns our airtime and data billers for it, so the app can pre-select the network as the user types. **Only a default** — numbers moved to another network keep their old prefix, so always let the user change it. `network` is null for prefixes we don't recognise; a biller id is null when that network can't be paid right now.",
+            parameters: [{ name: "phone", in: "query", required: true, schema: { type: "string", example: "08126257120" }, description: "Any common format: 08126257120, +2348126257120, 8126257120." }],
+            responses: {
+                "200": { description: "Detected (or not).", content: jsonContent({
+                    schema: dataEnvelope({ message: "Network detected", code: 200, data: { type: "object", properties: {
+                        phone: { type: "string", example: "08126257120", description: "Normalised local form — send this as customerId." },
+                        network: { type: ["object", "null"], properties: { code: { type: "string", enum: ["mtn", "airtel", "glo", "9mobile"] }, name: { type: "string", example: "Airtel" } } },
+                        airtimeBillerId: { type: ["string", "null"], format: "uuid" },
+                        dataBillerId: { type: ["string", "null"], format: "uuid" },
+                    } } }),
+                }) },
+                "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"),
+            },
+        },
+    },
     "/bills/validate": {
         post: {
             tags: ["Bills"], summary: "Check a customer number", operationId: "postBillCustomerValidation", security: auth,
@@ -111,6 +159,57 @@ const billPaths = {
                 "400": error("Validation failed, or the biller has no such customer.", "We couldn't find this customer number. Check it and try again.", 400),
                 "401": ref("Unauthorized"), "403": ref("Forbidden"), "429": ref("TooManyRequests"), "500": ref("ServerError"),
                 "503": error("The bill provider can't be reached right now. Try again shortly.", "Bill payments are temporarily unavailable. Please try again shortly.", 503),
+            },
+        },
+    },
+    "/bills/payments": {
+        post: {
+            tags: ["Bills"], summary: "Pay a bill", operationId: "postBillPayment", security: auth,
+            description: "Requires the transfer PIN. Takes `total` from the naira balance immediately and submits the payment. Returns `201` for a new payment, or `200` with the original payment when the `idempotencyKey` was already used.",
+            requestBody: { required: true, content: jsonContent({
+                schema: { type: "object", required: ["productId", "customerId", "idempotencyKey", "pin"], properties: {
+                    productId: { type: "string", format: "uuid" },
+                    customerId: { type: "string", example: "08038291822", description: "Phone / meter / smartcard / account number. Spaces and dashes are dropped." },
+                    amount: { type: "string", example: "1500.00", description: "Required for `range` products (between minAmount and maxAmount). Optional for `fixed` products — if sent, it must equal the price." },
+                    idempotencyKey: { type: "string", format: "uuid", description: "New per payment; reuse it only to retry the same payment." },
+                    pin: { $ref: "#/components/schemas/Pin" },
+                } },
+                example: { productId: "3f1c2a52-6a0e-4f5b-9a57-2f5f1d0c9b10", customerId: "08038291822", amount: "1500.00", idempotencyKey: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d", pin: "4827" },
+            }) },
+            responses: {
+                "201": { description: "Submitted (usually `pending`).", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment submitted", code: 201, data: billPayment }) }) },
+                "200": { description: "This idempotencyKey was already used — the original payment.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment already submitted", code: 200, data: billPayment }) }) },
+                "400": error("Validation failed (amount out of range, invalid customer number, unavailable product) or wrong PIN.", "Validation failed", 400),
+                "401": ref("Unauthorized"),
+                "402": error("The balance doesn't cover `total`.", "You don't have enough balance for this payment", 402),
+                "403": ref("Forbidden"), "423": ref("PinLocked"), "500": ref("ServerError"),
+            },
+        },
+        get: {
+            tags: ["Bills"], summary: "My bill payments", operationId: "getBillPayments", security: auth,
+            description: "Newest first. Use `hasMore` to load the next page (`offset` + `limit`).",
+            parameters: [
+                { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } },
+                { name: "offset", in: "query", required: false, schema: { type: "integer", minimum: 0, default: 0 } },
+            ],
+            responses: {
+                "200": { description: "A page of payments.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payments fetched", code: 200, data: { type: "object", properties: {
+                    items: { type: "array", items: billPayment }, limit: { type: "integer", example: 20 }, offset: { type: "integer", example: 0 }, hasMore: { type: "boolean" },
+                } } }) }) },
+                "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"),
+            },
+        },
+    },
+    "/bills/payments/{billPaymentId}": {
+        get: {
+            tags: ["Bills"], summary: "A bill payment", operationId: "getBillPayment", security: auth,
+            description: "Poll this after paying. An open payment is re-checked with the biller (at most every 15 seconds) before answering.",
+            parameters: [{ name: "billPaymentId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+            responses: {
+                "200": { description: "The payment.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment fetched", code: 200, data: billPayment }) }) },
+                "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"),
+                "404": error("No such payment for this user.", "Bill payment not found", 404),
+                "500": ref("ServerError"),
             },
         },
     },

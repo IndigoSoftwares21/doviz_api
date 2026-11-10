@@ -2,6 +2,19 @@
 const BILLS = {
     /** Provider for NEW payments and catalog listings (in-flight payments keep theirs). */
     DEFAULT_PROVIDER: "flutterwave",
+    /**
+     * A payment the provider still can't find this long after we sent it is
+     * refunded — but only if our request never got an answer. One the
+     * provider acknowledged (we hold its reference) is never auto-refunded.
+     */
+    NOT_FOUND_REFUND_AFTER_MS: 30 * 60 * 1000,
+    /** Reading an open payment re-checks the provider at most this often. */
+    REFRESH_ON_READ_AFTER_MS: 15 * 1000,
+    /** The reconciler leaves very new payments to the request that made them. */
+    RECONCILE_MIN_AGE_MS: 60 * 1000,
+    RECONCILE_BATCH_SIZE: 50,
+    HISTORY_DEFAULT_LIMIT: 20,
+    HISTORY_MAX_LIMIT: 50,
 } as const;
 
 /** Fixed list Doviz owns — the app groups billers by these. */
@@ -38,6 +51,25 @@ export const PROVIDER_BILL_STATUS = {
     COMPLETED: "completed",
     FAILED: "failed",
 } as const;
+
+/**
+ * Nigerian mobile prefixes by the network that ISSUED them — the same for
+ * every bill provider. Ported numbers keep their old prefix, so a detected
+ * network is only a default the user can change. Longest prefixes are checked
+ * first (07025/07026 are MTN inside other operators' 0702 range).
+ */
+export const MOBILE_NETWORKS = [
+    {
+        code: "mtn",
+        name: "MTN",
+        prefixes: ["07025", "07026", "0703", "0704", "0706", "0803", "0806", "0810", "0813", "0814", "0816", "0903", "0906", "0913", "0916"],
+    },
+    { code: "airtel", name: "Airtel", prefixes: ["0701", "0708", "0802", "0808", "0812", "0901", "0902", "0904", "0907", "0911", "0912"] },
+    { code: "glo", name: "Glo", prefixes: ["0705", "0805", "0807", "0811", "0815", "0905", "0915"] },
+    { code: "9mobile", name: "9mobile", prefixes: ["0809", "0817", "0818", "0908", "0909"] },
+] as const;
+
+export type MobileNetworkCode = (typeof MOBILE_NETWORKS)[number]["code"];
 
 /**
  * How a provider biller links to ours (see biller_provider_refs).
@@ -78,6 +110,16 @@ export const BILL_PROVIDER_ERROR_CODE = {
     INVALID_RESPONSE: "invalid_response",
 } as const;
 
+/** What one sync of a bill payment did. */
+export const BILL_SYNC_OUTCOME = {
+    COMPLETED: "completed",
+    REFUNDED: "refunded",
+    PENDING: "pending",
+    UNCHANGED: "unchanged",
+    NEEDS_REVIEW: "needs_review",
+} as const;
+
+export type BillSyncOutcome = (typeof BILL_SYNC_OUTCOME)[keyof typeof BILL_SYNC_OUTCOME];
 export type BillerLinkStatus = (typeof BILLER_LINK_STATUS)[keyof typeof BILLER_LINK_STATUS];
 export type BillProviderErrorCode = (typeof BILL_PROVIDER_ERROR_CODE)[keyof typeof BILL_PROVIDER_ERROR_CODE];
 export type BillCategory = (typeof BILL_CATEGORY)[keyof typeof BILL_CATEGORY];

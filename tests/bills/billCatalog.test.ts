@@ -26,6 +26,7 @@ describe("normalizeBillText", () => {
         expect(normalizeBillText({ text: "IKEDC  PREPAID" })).toBe("IKEDC PREPAID");
         expect(normalizeBillText({ text: "ikedc-top_up (prepaid)." })).toBe("IKEDC TOP UP PREPAID");
         expect(normalizeBillText({ text: "MTN 1.5 GB" })).toBe("MTN 1.5 GB");
+        expect(normalizeBillText({ text: "MTN 1.2GB+2GB Youtube" })).toBe("MTN 1.2GB+2GB YOUTUBE");
     });
 });
 
@@ -94,6 +95,10 @@ describe("cleanBillProductName", () => {
         ["GOTV Light Quarterly", "cable_tv", ["GOTV"], "Light Quarterly"],
         ["SMART - One Month", "cable_tv", ["STARTIMES"], "Smart One Month"],
         ["ipNX Family Plan", "internet", ["IPNX"], "Family Plan"],
+        ["Asian + HD/ExtraView", "cable_tv", ["DSTV"], "Asian + HD ExtraView"],
+        ["MTN 1.2GB+2GB Youtube", "data", ["MTN"], "1.2GB+2GB Youtube"],
+        ["MTN 1GB data purchase (1 day)", "data", ["MTN"], "1GB 1 day"],
+        ["Box Office (New Premier Price)", "cable_tv", ["DSTV"], "Box Office New Premier Price"],
     ])("%s → %s", (raw, category, keywords, expected) => {
         expect(clean(raw, category as never, keywords)).toBe(expected);
     });
@@ -110,7 +115,7 @@ describe("cleanBillProductName", () => {
     });
 
     it("falls back to the tidied raw name rather than returning nothing", () => {
-        expect(clean("DSTV Payment", "cable_tv", ["DSTV"])).toBe("Dstv Payment");
+        expect(clean("DSTV Payment", "cable_tv", ["DSTV"])).toBe("DSTV Payment");
     });
 });
 

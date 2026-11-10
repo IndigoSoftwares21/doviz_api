@@ -13,8 +13,10 @@ const text = (value: string | null | undefined) => {
 
 /**
  * A Flutterwave bill status record → our neutral payment. Cost to Doviz is
- * amount + fee (what the wallet is debited); commission is paid back
- * separately and isn't netted here.
+ * read from THIS payment's record — amount + fee − commission — never from a
+ * fixed rate: Flutterwave's fees and commissions differ per biller, item and
+ * amount, and change over time. Commission is credited back to the wallet
+ * immediately (verified live: ₦100 airtime, commission 3 → wallet −₦97).
  */
 const mapFlutterwaveBillPayment = ({
     externalId,
@@ -29,14 +31,17 @@ const mapFlutterwaveBillPayment = ({
     const currency = text(record.currency) ?? FLUTTERWAVE.COUNTRY_CURRENCY[FLUTTERWAVE.COUNTRY];
     const amount = toFlutterwaveMoney({ value: record.amount }) ?? requestedAmount;
     const fee = toFlutterwaveMoney({ value: record.fee });
+    const commission = toFlutterwaveMoney({ value: record.commission });
     const status = mapFlutterwaveBillStatus({ status: record.status });
+    const reportsCost = fee !== null || commission !== null;
+    const cost = new Decimal(amount).plus(fee ?? 0).minus(commission ?? 0);
 
     return {
         externalId,
         providerReference: text(record.tx_ref) ?? text(record.flw_ref),
         status,
         amount: { amount, currency },
-        cost: fee === null ? null : { amount: new Decimal(amount).plus(fee).toFixed(2), currency },
+        cost: reportsCost ? { amount: cost.toFixed(2), currency } : null,
         token: text(record.extra) ?? text(record.token),
         failureReason: status === PROVIDER_BILL_STATUS.FAILED ? (text(record.message) ?? "Failed at provider") : null,
     };

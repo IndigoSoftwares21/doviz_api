@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import monitoring from "@/utils/monitoring";
-import providerRegistry from "@/services/crypto/providerRegistry";
+import findWebhookReceiver from "@/services/webhooks/findWebhookReceiver";
 import createProviderWebhookEvent from "@/actions/providerWebhookEvent/createProviderWebhookEvent";
 import createProviderWebhookRejection from "@/actions/providerWebhookRejection/createProviderWebhookRejection";
 import processWebhookEvent from "@/actions/providerWebhookEvent/processWebhookEvent";
@@ -16,11 +16,11 @@ import postProviderWebhookSchema from "./schema/postProviderWebhookSchema";
 const postProviderWebhook = async (req: Request, res: Response) => {
     try {
         const parsed = postProviderWebhookSchema.safeParse({ provider: req.params.provider });
-        if (!parsed.success || !providerRegistry.has({ name: parsed.data.provider })) {
+        const provider = parsed.success ? findWebhookReceiver({ name: parsed.data.provider }) : null;
+        if (!provider) {
             return handleError({ res, req, message: "Not found", code: 404 });
         }
-        const name = parsed.data.provider;
-        const provider = providerRegistry.get({ name });
+        const name = provider.name;
         const sourceIp = req.ip ?? null;
 
         if (!provider.verifyWebhook({ headers: req.headers, body: req.body, sourceIp })) {

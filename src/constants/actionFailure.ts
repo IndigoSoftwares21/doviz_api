@@ -13,6 +13,7 @@ const ACTION_FAILURE = {
     MARKUP_MISSING: "markup_missing",
     PROVIDER_UNAVAILABLE: "provider_unavailable",
     CUSTOMER_NOT_FOUND: "customer_not_found",
+    INSUFFICIENT_BALANCE: "insufficient_balance",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

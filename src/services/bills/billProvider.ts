@@ -1,4 +1,6 @@
 import { ProviderEnvironment } from "@/constants/crypto";
+import { WebhookRequest } from "@/services/crypto/cryptoProvider";
+import { ProviderWebhookEvent } from "@/services/crypto/types";
 import { Money, ProviderBillCatalog, ProviderBillPayment, ProviderCustomer } from "./types";
 
 /**
@@ -44,4 +46,15 @@ export interface BillProvider {
      * (some providers can only look up by theirs). null = no record of it.
      */
     getBillPayment(args: { externalId: string; providerReference: string | null }): Promise<ProviderBillPayment | null>;
+
+    /** True only for an authentic request from this provider. */
+    verifyWebhook(request: WebhookRequest): boolean;
+    /**
+     * Webhook body → neutral event. A bill payment event has resourceType
+     * `bill_payment` and resourceId = our external id or the provider's
+     * reference; the body is never trusted for money (the payment is re-fetched).
+     */
+    parseWebhook(body: unknown): ProviderWebhookEvent | null;
+    /** True for a "is this URL alive?" ping — answered 200, never stored. */
+    isWebhookPing(body: unknown): boolean;
 }

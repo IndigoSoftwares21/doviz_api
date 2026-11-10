@@ -117,7 +117,8 @@ run("bill catalog listing against Postgres", () => {
         expect(await selectListableBiller({ billerId: await billerId("dstv"), provider, environment })).toBeUndefined();
 
         expect(await selectListableBillProduct({ productId: ids.gb1, provider, environment })).toEqual({
-            id: ids.gb1, customerIdLabel: "Phone number", customerIdPattern: "^0[789][01][0-9]{8}$",
+            id: ids.gb1, amountType: "fixed", currency: "NGN", price: "1000.00", minAmount: null, maxAmount: null,
+            customerIdLabel: "Phone number", customerIdPattern: "^0[789][01][0-9]{8}$",
         });
         for (const key of ["disabled", "gone", "prepaid", "gloAirtime"]) {
             expect(await selectListableBillProduct({ productId: ids[key], provider, environment })).toBeUndefined();

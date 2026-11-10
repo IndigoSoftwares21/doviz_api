@@ -1,12 +1,17 @@
 # Bill Payments (provider-agnostic; Flutterwave first)
 
-Status: **phases 1–3 done; phase 4 (paying from the balance) next.** Migration
-`20261110145824_add_bill_payments` verified up → down → up on a throwaway
-Postgres. The Flutterwave sandbox catalog syncs, reviews and is served by
-`GET /bills/categories`, `GET /bills/billers`, `GET /bills/billers/{id}/products`
-and `POST /bills/validate` (documented in Scalar under "Bills").
-**Blocked:** Flutterwave validate / pay / status need IP whitelisting before
-they can be verified live (only `GET /bill-categories` works without it).
+Status: **phases 1–4 done** — users can browse, validate and pay bills from
+their naira balance (`POST /bills/payments`, `GET /bills/payments[/{id}]`),
+settled/refunded via webhook (`POST /webhooks/flutterwave`), a 2-minute
+reconciler and refresh-on-read. Money path verified against Postgres
+(`tests/bills/billPayment.integration.test.ts`) and end to end over HTTP.
+**Blocked for live payments:** Flutterwave IP whitelisting (until then every
+payment is refused as a setup problem and refunded at once).
+
+**To verify once whitelisted:** the pay response's `tx_ref`, that
+`GET /bills/{ref}` finds payments by our reference, and the bill webhook body
+(which field echoes our reference). Until confirmed, a payment Flutterwave
+acknowledged is never auto-refunded — only flagged.
 
 ## 1. The product
 Users pay bills from their in-app balance: airtime, data, electricity, cable TV,
