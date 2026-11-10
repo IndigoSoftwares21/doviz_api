@@ -22,12 +22,16 @@ export const billTags = [
         name: "Bills",
         description: `Airtime, data, electricity, cable TV and internet, paid from the user's naira balance.
 
-**Flow:** categories → billers in a category → a biller's products → (if \`requiresValidation\`) validate the customer number → pay → poll the payment until it's \`completed\` or \`failed\`.
+**Flow:** categories → billers in a category → a biller's products → (if \`requiresValidation\`) validate the customer number → pay → show "Payment sent" and listen for the result on the socket.
 
-**Paying:** \`POST /bills/payments\` takes the money from the user's naira balance at once and sends the payment to the biller. It comes back \`pending\`; poll \`GET /bills/payments/{id}\` every few seconds until it's final:
+**Paying:** \`POST /bills/payments\` takes the money from the user's naira balance at once and sends the payment to the biller. It comes back \`pending\` — show "Payment sent" straight away; the result arrives as a socket event (below):
 - \`completed\` — delivered. For prepaid electricity, show \`token\`.
 - \`failed\` — not delivered; the full \`total\` has already been returned to the balance. Show \`failureReason\`.
-- \`processing\` — the biller hasn't answered yet; keep polling (it can take minutes). Money is never refunded on a guess.
+- \`processing\` — the biller hasn't answered yet (it can take minutes). Money is never refunded on a guess.
+
+**Realtime (Socket.IO):** connect to path \`/api/v1/realtime\` with \`auth: { token: <accessToken> }\`. The server closes the socket when the token expires — reconnect after unlocking, then refetch anything on screen. Events (to all of the user's devices):
+- \`bill_payment.updated\` \`{ billPaymentId, status }\` — a payment completed or failed (refunded): fetch \`GET /bills/payments/{id}\` for details and the token.
+- \`wallet.balance_changed\` \`{}\` — the naira balance changed (payment, refund, deposit): refetch the balance.
 
 Send a new UUID \`idempotencyKey\` for each payment and **reuse it when retrying** after a timeout or network error — the retry returns the original payment instead of paying twice.
 
@@ -203,7 +207,7 @@ const billPaths = {
     "/bills/payments/{billPaymentId}": {
         get: {
             tags: ["Bills"], summary: "A bill payment", operationId: "getBillPayment", security: auth,
-            description: "Poll this after paying. An open payment is re-checked with the biller (at most every 15 seconds) before answering.",
+            description: "The payment as Doviz has it. Fetch it when a `bill_payment.updated` socket event names it (and when the socket reconnects). Doesn't call the biller.",
             parameters: [{ name: "billPaymentId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
             responses: {
                 "200": { description: "The payment.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment fetched", code: 200, data: billPayment }) }) },

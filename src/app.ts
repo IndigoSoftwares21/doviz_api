@@ -8,6 +8,7 @@ import webhookRoutes from "@/routes/webhook.routes";
 import registerCryptoProviders from "@/services/crypto/providers";
 import registerBillProviders from "@/services/bills/providers";
 import startJobs from "@/jobs/startJobs";
+import startRealtime from "@/services/realtime/startRealtime";
 
 import dotenv from "dotenv";
 import cors from "cors";
@@ -125,6 +126,8 @@ class App {
 
             server.once("listening", () => {
                 this.server = server;
+                // Push events to signed-in devices (only in a real server, never in tests).
+                startRealtime({ server });
                 monitoring.info(`Server running on port ${port}`);
                 resolve();
             });

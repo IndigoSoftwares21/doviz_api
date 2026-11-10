@@ -8,8 +8,19 @@ const BILLS = {
      * provider acknowledged (we hold its reference) is never auto-refunded.
      */
     NOT_FOUND_REFUND_AFTER_MS: 30 * 60 * 1000,
-    /** Reading an open payment re-checks the provider at most this often. */
-    REFRESH_ON_READ_AFTER_MS: 15 * 1000,
+    /**
+     * How long POST /bills/payments waits for the provider before answering
+     * `pending` and finishing in the background — keeps the response well
+     * under the app's 15s timeout however slow the provider is (Flutterwave
+     * has taken 15s+). The money is already held when this starts.
+     */
+    SUBMIT_WAIT_MS: 8 * 1000,
+    /**
+     * When a new payment is re-checked with its provider (ms after it's made),
+     * so the app hears the result over the socket within seconds even without
+     * a provider webhook. After the last, the reconciler takes over.
+     */
+    FOLLOW_UP_CHECKS_MS: [5_000, 15_000, 30_000, 60_000],
     /** The reconciler leaves very new payments to the request that made them. */
     RECONCILE_MIN_AGE_MS: 60 * 1000,
     RECONCILE_BATCH_SIZE: 50,

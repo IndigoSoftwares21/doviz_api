@@ -7,8 +7,8 @@
     "start": "node dist/src/app.js",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "test": "jest",
-    "fresh": "docker-compose down -v && docker-compose up --build -d --wait && echo '\ud83d\ude80 Docker containers are running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
-    "dev": "docker-compose up -d --wait && echo '\ud83d\ude80 Docker is running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
+    "fresh": "docker-compose down -v && docker-compose up --build -d --wait && echo '🚀 Docker containers are running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
+    "dev": "docker-compose up -d --wait && echo '🚀 Docker is running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
     "docker:logs": "docker-compose logs -f --tail=50",
     "lint": "eslint \"src/**/*.ts\"",
     "prepare": "husky install || true",
@@ -57,6 +57,7 @@
     "path": "^0.12.7",
     "pg": "^8.14.1",
     "short-unique-id": "^5.2.2",
+    "socket.io": "^4.8.1",
     "streamifier": "^0.1.1",
     "winston": "^3.11.0",
     "zod": "^3.24.2"

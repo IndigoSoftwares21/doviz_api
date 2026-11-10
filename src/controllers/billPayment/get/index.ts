@@ -11,7 +11,7 @@ const getBillPayment = async (req: Request, res: Response) => {
 
         const validated = await getBillPaymentSchema.parseAsync({ billPaymentId });
 
-        const { data } = await fetchBillPayment({ userId, billPaymentId: validated.billPaymentId, refresh: true });
+        const { data } = await fetchBillPayment({ userId, billPaymentId: validated.billPaymentId });
         if (!data) return handleError({ res, req, message: "Bill payment not found", code: 404 });
 
         res.set("Cache-Control", "no-store");

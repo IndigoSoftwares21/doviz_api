@@ -19,7 +19,12 @@ const verifyAccessToken = ({ token }: { token: string }) => {
         throw new Error("Malformed access token");
     }
 
-    return { userId: claims.sub, sessionId: claims.sid };
+    return {
+        userId: claims.sub,
+        sessionId: claims.sid,
+        /** When the token stops being valid (long-lived sockets are closed then). */
+        expiresAt: typeof claims.exp === "number" ? new Date(claims.exp * 1000) : null,
+    };
 };
 
 export default verifyAccessToken;

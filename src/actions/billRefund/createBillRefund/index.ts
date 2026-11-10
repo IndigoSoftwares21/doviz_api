@@ -3,6 +3,8 @@ import { Kysely } from "kysely";
 import { Database } from "@/database/types";
 import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
+import publishUserEvent from "@/services/realtime/publishUserEvent";
+import { REALTIME_EVENT } from "@/constants/realtime";
 import selectRefundPaymentForUpdate from "./queries/selectRefundPaymentForUpdate";
 import updateBillPaymentFailed from "./queries/updateBillPaymentFailed";
 import AUDIT_ACTIONS from "@/constants/auditActions";
@@ -44,6 +46,9 @@ const createBillRefund = async ({ trx, billPaymentId, reason }: { trx: Kysely<Da
         entityId: payment.id,
         metadata: { billPaymentId: payment.id, provider: payment.provider, total: payment.total, reason },
     });
+
+    await publishUserEvent({ trx, userId: payment.userId, event: REALTIME_EVENT.BILL_PAYMENT_UPDATED, data: { billPaymentId: payment.id, status: "failed" } });
+    await publishUserEvent({ trx, userId: payment.userId, event: REALTIME_EVENT.WALLET_BALANCE_CHANGED });
 
     return { data: { refunded: true } };
 };

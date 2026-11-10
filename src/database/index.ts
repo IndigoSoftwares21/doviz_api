@@ -7,7 +7,7 @@ import { Database } from "./types";
 dotenv.config();
 
 // Database connection details
-const connectionDetails = {
+export const connectionDetails = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -49,7 +49,7 @@ const pool = new Pool({
     ...connectionDetails,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000,
 });
 
 // Setup connection error handling

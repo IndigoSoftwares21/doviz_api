@@ -1,0 +1,26 @@
+/** Server → app push events over the authenticated socket. */
+const REALTIME = {
+    /** Socket.IO endpoint path (next to /api/v1/app). */
+    PATH: "/api/v1/realtime",
+    /**
+     * Postgres NOTIFY channel. Events are published inside the transaction
+     * that made the change, so they go out only if it commits — and every
+     * API instance LISTENs, so a user's socket gets it whichever instance
+     * (request, webhook, job) made the change.
+     */
+    CHANNEL: "doviz_user_events",
+    /** Room each socket joins: one per user, all their devices. */
+    userRoom: (userId: string) => `user:${userId}`,
+} as const;
+
+/** Event names the app listens for. Payloads are tiny: the app fetches details over HTTP. */
+export const REALTIME_EVENT = {
+    /** { billPaymentId, status } — a bill payment was created, completed or refunded. */
+    BILL_PAYMENT_UPDATED: "bill_payment.updated",
+    /** {} — the naira balance changed (payment held, refund, deposit credited). */
+    WALLET_BALANCE_CHANGED: "wallet.balance_changed",
+} as const;
+
+export type RealtimeEvent = (typeof REALTIME_EVENT)[keyof typeof REALTIME_EVENT];
+
+export default REALTIME;

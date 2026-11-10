@@ -12,6 +12,7 @@ import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import billProviderRegistry from "@/services/bills/billProviderRegistry";
 import BillProviderError from "@/services/bills/billProviderError";
 import { LEDGER_ACCOUNT_KIND, LEDGER_TRANSACTION_TYPE } from "@/constants/ledger";
+import BILLS from "@/constants/bills";
 import { billPaymentRecord, makeFakeBillProvider } from "./fakeBillProvider";
 
 jest.mock("@/actions/pinVerification/createPinVerification");
@@ -166,6 +167,24 @@ run("bill payments against Postgres", () => {
         getBillPayment.mockResolvedValue(billPaymentRecord({ externalId: data!.id, status: "failed", failureReason: "Biller down" }));
         await expect(syncBillPayment({ billPaymentId: data!.id })).resolves.toEqual({ data: { outcome: "refunded" } });
         expect(await userBalance()).toBe(before);
+    });
+
+    it("answers pending when the provider is slow, and finishes the payment in the background", async () => {
+        const shortWait = jest.replaceProperty(BILLS, "SUBMIT_WAIT_MS", 50);
+        let release!: () => void;
+        payBill.mockImplementation(({ externalId }) =>
+            new Promise((resolve) => (release = () => resolve(billPaymentRecord({ externalId, providerReference: "CF-SLOW" })))));
+
+        const started = Date.now();
+        const { data } = await pay({ productId: airtimeId, amount: "100.00" });
+        expect(Date.now() - started).toBeLessThan(2000);
+        expect(data).toMatchObject({ status: "pending" });
+        expect((await payment(data!.id)).providerReference).toBeNull();
+
+        release();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        expect((await payment(data!.id)).providerReference).toBe("CF-SLOW");
+        shortWait.restore();
     });
 
     it("refuses a payment the balance can't cover, leaving no trace", async () => {

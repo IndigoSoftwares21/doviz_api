@@ -6,6 +6,8 @@ import AUDIT_ACTIONS from "@/constants/auditActions";
 import { ProviderDeposit } from "@/services/crypto/types";
 import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
+import publishUserEvent from "@/services/realtime/publishUserEvent";
+import { REALTIME_EVENT } from "@/constants/realtime";
 import calculateMarkup from "@/utils/money/calculateMarkup";
 import toKobo from "@/utils/money/toKobo";
 import monitoring from "@/utils/monitoring";
@@ -70,6 +72,8 @@ const createDepositCredit = async ({ trx, provider, depositId, record, wallet }:
         entityId: depositId,
         metadata: { depositId, netNgn, symbol: wallet.symbol },
     });
+
+    await publishUserEvent({ trx, userId: wallet.userId, event: REALTIME_EVENT.WALLET_BALANCE_CHANGED });
 
     return { data: { netNgn, markupNgn, grossNgn } };
 };

@@ -4,17 +4,21 @@ import { withTransaction } from "@/database";
 import createPinVerification from "@/actions/pinVerification/createPinVerification";
 import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
+import publishUserEvent from "@/services/realtime/publishUserEvent";
+import { REALTIME_EVENT } from "@/constants/realtime";
 import fetchBillPayment from "@/actions/billPayment/fetchBillPayment";
 import selectBillPaymentIdByIdempotencyKey from "./queries/selectBillPaymentIdByIdempotencyKey";
 import selectPaymentProduct from "./queries/selectPaymentProduct";
 import insertBillPayment from "./queries/insertBillPayment";
 import submitBillPayment from "./utils/submitBillPayment";
+import scheduleBillPaymentChecks from "./utils/scheduleBillPaymentChecks";
+import monitoring from "@/utils/monitoring";
 import isInsufficientBalanceError from "./utils/isInsufficientBalanceError";
 import isIdempotencyConflictError from "./utils/isIdempotencyConflictError";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import AUDIT_ACTIONS from "@/constants/auditActions";
-import { BILL_AMOUNT_TYPE } from "@/constants/bills";
+import BILLS, { BILL_AMOUNT_TYPE } from "@/constants/bills";
 import { LEDGER_ACCOUNT_KIND, LEDGER_TRANSACTION_TYPE } from "@/constants/ledger";
 import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
@@ -33,8 +37,10 @@ interface ICreateBillPayment {
 /**
  * Pays a bill from the user's balance: PIN → hold the money and record the
  * payment (one transaction; the ledger refuses an overdraft) → send it to
- * the provider → return it. Repeating a request with the same idempotency
- * key returns the original payment instead of paying twice.
+ * the provider → return it. Waits for the provider only up to
+ * BILLS.SUBMIT_WAIT_MS; a slower provider finishes in the background and the
+ * app sees the result by polling. Repeating a request with the same
+ * idempotency key returns the original payment instead of paying twice.
  */
 const createBillPayment = async ({ userId, productId, customerId, amount, idempotencyKey, pin, ipAddress, userAgent }: ICreateBillPayment) => {
     const { data: verification } = await createPinVerification({ userId, pin, ipAddress, userAgent });
@@ -43,7 +49,7 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
     const replay = async () => {
         const existing = await selectBillPaymentIdByIdempotencyKey({ userId, idempotencyKey });
         if (!existing) return null;
-        const { data } = await fetchBillPayment({ userId, billPaymentId: existing.id, refresh: false });
+        const { data } = await fetchBillPayment({ userId, billPaymentId: existing.id });
         return { data, failure: null, verification, isNew: false };
     };
 
@@ -97,6 +103,9 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
                 userAgent,
                 metadata: { billPaymentId: id, productId, total, currency: product.currency },
             });
+
+            // The user's other devices see the balance drop at once.
+            await publishUserEvent({ trx, userId, event: REALTIME_EVENT.WALLET_BALANCE_CHANGED });
         });
     } catch (error) {
         if (isInsufficientBalanceError({ error })) return { data: null, failure: ACTION_FAILURE.INSUFFICIENT_BALANCE, verification, isNew: false };
@@ -107,15 +116,21 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
         throw error;
     }
 
-    await submitBillPayment({
+    // submitBillPayment handles every provider outcome itself; anything it
+    // throws is logged and left to the reconciler (the money is held, never lost).
+    const submission = submitBillPayment({
         billPaymentId: id,
         provider: product.provider,
         providerProductRef: product.providerProductRef,
         customerId,
         amount: { amount: chargeAmount, currency: product.currency },
-    });
+    }).catch((error) => monitoring.error(`Bill payment ${id}: submission failed — will reconcile`, error as Error));
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([submission, new Promise<void>((resolve) => (timer = setTimeout(resolve, BILLS.SUBMIT_WAIT_MS)))]);
+    clearTimeout(timer);
 
-    const { data } = await fetchBillPayment({ userId, billPaymentId: id, refresh: false });
+    const { data } = await fetchBillPayment({ userId, billPaymentId: id });
+    if (data && (data.status === "pending" || data.status === "processing")) scheduleBillPaymentChecks({ billPaymentId: id });
     return { data, failure: null, verification, isNew: true };
 };
 

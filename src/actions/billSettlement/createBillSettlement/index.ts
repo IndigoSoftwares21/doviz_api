@@ -4,6 +4,8 @@ import { Database } from "@/database/types";
 import { ProviderBillPayment } from "@/services/bills/types";
 import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
+import publishUserEvent from "@/services/realtime/publishUserEvent";
+import { REALTIME_EVENT } from "@/constants/realtime";
 import selectSettlementPaymentForUpdate from "./queries/selectSettlementPaymentForUpdate";
 import updateBillPaymentCompleted from "./queries/updateBillPaymentCompleted";
 import AUDIT_ACTIONS from "@/constants/auditActions";
@@ -63,6 +65,8 @@ const createBillSettlement = async ({ trx, billPaymentId, record }: { trx: Kysel
         entityId: payment.id,
         metadata: { billPaymentId: payment.id, provider: payment.provider, total: payment.total, providerCost },
     });
+
+    await publishUserEvent({ trx, userId: payment.userId, event: REALTIME_EVENT.BILL_PAYMENT_UPDATED, data: { billPaymentId: payment.id, status: "completed" } });
 
     return { data: { settled: true } };
 };
