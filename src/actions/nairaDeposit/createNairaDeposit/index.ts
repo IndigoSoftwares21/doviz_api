@@ -3,6 +3,7 @@ import { withTransaction } from "@/database";
 import collectionProviderRegistry from "@/services/collections/collectionProviderRegistry";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import fetchNairaDeposit from "@/actions/nairaDeposit/fetchNairaDeposit";
+import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
 import selectNairaDepositIdByIdempotencyKey from "./queries/selectNairaDepositIdByIdempotencyKey";
 import selectDepositCustomer from "./queries/selectDepositCustomer";
 import insertNairaDeposit from "./queries/insertNairaDeposit";
@@ -27,7 +28,10 @@ interface ICreateNairaDeposit {
  * amount (the provider's fee added on top when the user bears it) and
  * records it. No money moves here — the user is credited only when the
  * provider confirms the transfer. Repeating a request with the same
- * idempotency key returns the original deposit.
+ * idempotency key returns the original deposit; asking again for the same
+ * amount while that account still has time left reuses it (one live account
+ * per top-up, not one per tap). A different amount gets a new account — the
+ * old one is still credited if paid.
  */
 const createNairaDeposit = async ({ userId, amount, idempotencyKey, ipAddress, userAgent }: ICreateNairaDeposit) => {
     const replay = async () => {
@@ -39,6 +43,11 @@ const createNairaDeposit = async ({ userId, amount, idempotencyKey, ipAddress, u
 
     const previous = await replay();
     if (previous) return previous;
+
+    const { data: active } = await fetchActiveNairaDeposit({ userId });
+    if (active && active.amount === amount && active.expiresInSeconds * 1000 >= NAIRA_DEPOSITS.REUSE_MIN_REMAINING_MS) {
+        return { data: active, failure: null, isNew: false };
+    }
 
     const customer = await selectDepositCustomer({ userId });
     const name = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || null;

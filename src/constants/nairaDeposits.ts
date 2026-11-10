@@ -12,6 +12,11 @@ const NAIRA_DEPOSITS = {
      * checking expired deposits this long after expiry.
      */
     LATE_PAYMENT_WINDOW_MS: 24 * 60 * 60 * 1000,
+    /**
+     * Starting a deposit for the same amount reuses the open one instead of
+     * issuing a second account — if it has at least this long left to pay.
+     */
+    REUSE_MIN_REMAINING_MS: 10 * 60 * 1000,
     /** The reconciler leaves very new deposits alone; webhooks handle the normal case. */
     RECONCILE_MIN_AGE_MS: 60 * 1000,
     RECONCILE_BATCH_SIZE: 50,

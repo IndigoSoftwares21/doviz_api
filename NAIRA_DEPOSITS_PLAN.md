@@ -1,6 +1,10 @@
 # Naira Deposits (provider-agnostic; Korapay first)
 
-Status: **plan** — nothing built yet.
+Status: **phases 1–4 built** — `POST/GET /naira-deposits`, `GET /naira-deposits/{id}`,
+Korapay provider, webhook dispatch (`POST /webhooks/korapay`), `reconcile-naira-deposits`
+job (2 min), ledger credit. Money path verified against Postgres
+(`tests/naira-deposits/nairaDeposit.integration.test.ts`). **Not yet verified against
+Korapay's sandbox** — see §7. Mobile (phase 5) not started.
 
 ## 1. The product
 Users top up their naira balance by bank transfer. They enter an amount; we show
@@ -66,7 +70,7 @@ that transfer, and it's dynamic per provider and per amount.
      + `NAIRA_DEPOSIT_UPDATED`, audit log, notification.
    - `expired` / `failed` with nothing paid → status `expired` / `failed`.
    - still `pending` → bump `last_checked_at`.
-4. `GET /naira-deposits/:id` (refresh-on-read for open ones), `GET /naira-deposits` (history, limit/offset).
+4. `GET /naira-deposits/:id` (our record only — never calls the provider), `GET /naira-deposits` (history, limit/offset).
 5. Statement: `describeStatementEntry` learns `naira_deposit`.
 
 **Edge cases**
@@ -107,7 +111,8 @@ Doviz bears it → `amount_credited = amount_received`, the fee lands in
 
 ## 7. Korapay (`src/services/collections/providers/korapay/`)
 Base `https://api.korapay.com/merchant/api/v1`, `Authorization: Bearer <secret>`.
-Env: `KORAPAY_SECRET_KEY`, `KORAPAY_BASE_URL`, `NAIRA_COLLECTION_PROVIDERS`, `NAIRA_DEPOSIT_FEE_BEARER`.
+Env: `KORAPAY_SECRET_KEY`, `KORAPAY_ENV`, `KORAPAY_BASE_URL`, `KORAPAY_FALLBACK_CUSTOMER_EMAIL`, `NAIRA_COLLECTION_PROVIDERS`, `NAIRA_DEPOSIT_FEE_BEARER`.
+`notification_url` on each charge = `API_PUBLIC_URL` + `/api/<version>/webhooks/korapay` (Korapay only).
 - Create: `POST /charges/bank-transfer` `{ reference, amount, currency: "NGN", customer: { name, email }, narration, notification_url, merchant_bears_cost: feeBearer === "doviz" }` → `data.{ amount_expected, fee, bank_account.{ account_name, account_number, bank_name, expiry_date_in_utc } }`.
 - Status: `GET /charges/{reference}` → `status` (`success|pending|processing|expired|failed`), `amount`, `amount_paid`, `fee`.
 - Webhook: `POST /webhooks/korapay`, header `x-korapay-signature` = HMAC-SHA256 of

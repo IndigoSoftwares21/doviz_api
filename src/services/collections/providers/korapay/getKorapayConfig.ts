@@ -5,7 +5,7 @@ export interface KorapayConfig {
     baseUrl: string;
     secretKey: string;
     environment: ProviderEnvironment;
-    /** Where Korapay sends charge webhooks; null = the URL set in the dashboard. */
+    /** Sent as each charge's notification_url: API_PUBLIC_URL + /api/<version>/webhooks/korapay. null = the dashboard's URL. */
     webhookUrl: string | null;
     /** Korapay requires a customer email; used for users who haven't added one. */
     fallbackCustomerEmail: string | null;
@@ -38,7 +38,9 @@ const getKorapayConfig = (): KorapayConfig => {
         baseUrl: process.env.KORAPAY_BASE_URL || KORAPAY.DEFAULT_BASE_URL,
         secretKey,
         environment: environment as ProviderEnvironment,
-        webhookUrl: process.env.KORAPAY_WEBHOOK_URL || null,
+        webhookUrl: process.env.API_PUBLIC_URL
+            ? `${process.env.API_PUBLIC_URL.replace(/\/+$/, "")}/api/${process.env.API_VERSION || "v1"}/webhooks/${KORAPAY.PROVIDER_NAME}`
+            : null,
         fallbackCustomerEmail: process.env.KORAPAY_FALLBACK_CUSTOMER_EMAIL || null,
     };
 };

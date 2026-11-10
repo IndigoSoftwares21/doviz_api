@@ -6,6 +6,7 @@ import selectActiveSession from "@/middlewares/requireAuth/queries/selectActiveS
 import createNairaDeposit from "@/actions/nairaDeposit/createNairaDeposit";
 import fetchNairaDeposit from "@/actions/nairaDeposit/fetchNairaDeposit";
 import fetchNairaDeposits from "@/actions/nairaDeposits/fetchNairaDeposits";
+import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
 import ACTION_FAILURE from "@/constants/actionFailure";
 
 jest.mock("@/database", () => ({ db: {}, withTransaction: jest.fn() }));
@@ -13,6 +14,7 @@ jest.mock("@/middlewares/requireAuth/queries/selectActiveSession");
 jest.mock("@/actions/nairaDeposit/createNairaDeposit");
 jest.mock("@/actions/nairaDeposit/fetchNairaDeposit");
 jest.mock("@/actions/nairaDeposits/fetchNairaDeposits");
+jest.mock("@/actions/nairaDeposit/fetchActiveNairaDeposit");
 
 process.env.JWT_ACCESS_SECRET = "test-jwt-secret-test-jwt-secret-test-0001";
 
@@ -82,6 +84,18 @@ describe("naira deposit routes", () => {
         expect(fetchNairaDeposit).toHaveBeenCalledWith({ userId: "user-1", nairaDepositId: DEPOSIT_ID });
         expect((await request(app).get(`/api/v1/app/naira-deposits/${DEPOSIT_ID}`).set("Authorization", auth())).status).toBe(404);
         expect((await request(app).get("/api/v1/app/naira-deposits/not-a-uuid").set("Authorization", auth())).status).toBe(400);
+    });
+
+    it("returns the deposit in progress, or null — and isn't mistaken for an id", async () => {
+        jest.mocked(fetchActiveNairaDeposit).mockResolvedValueOnce({ data: view as never }).mockResolvedValueOnce({ data: null });
+        const active = await request(app).get("/api/v1/app/naira-deposits/active").set("Authorization", auth());
+        expect(active.status).toBe(200);
+        expect(active.body.data).toMatchObject({ id: DEPOSIT_ID });
+        expect(fetchActiveNairaDeposit).toHaveBeenCalledWith({ userId: "user-1" });
+        expect(fetchNairaDeposit).not.toHaveBeenCalled();
+        const none = await request(app).get("/api/v1/app/naira-deposits/active").set("Authorization", auth());
+        expect(none.status).toBe(200);
+        expect(none.body.data).toBeNull();
     });
 
     it("lists deposits with limit/offset", async () => {

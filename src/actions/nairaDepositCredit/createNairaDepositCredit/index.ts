@@ -22,8 +22,9 @@ const FINAL: string[] = [NAIRA_DEPOSIT_STATUS.COMPLETED, NAIRA_DEPOSIT_STATUS.FA
  *   provider_clearing     −settled   (received − provider fee: what reached Doviz)
  *   provider_fees         −absorbed  (only when Doviz bears the fee)
  * The amount is what the provider says it received — never the webhook body,
- * never what we asked for. Its fee is the provider's actual fee, else the fee
- * it quoted at creation. Does nothing if the deposit is already final; throws
+ * never what we asked for. The fee is the larger of the provider's reported
+ * fee and the fee it quoted at creation (a lookup can omit the fee or its
+ * VAT — under-counting it would credit the user the fee too). Does nothing if the deposit is already final; throws
  * rather than guess on a currency mismatch.
  */
 const createNairaDepositCredit = async ({ trx, nairaDepositId, record }: { trx: Kysely<Database>; nairaDepositId: string; record: ProviderBankTransfer }) => {
@@ -36,7 +37,7 @@ const createNairaDepositCredit = async ({ trx, nairaDepositId, record }: { trx: 
     }
 
     const amountReceived = new Decimal(record.amountPaid.amount).toFixed(2);
-    const providerFee = new Decimal(record.fee?.amount ?? deposit.fee ?? "0").toFixed(2);
+    const providerFee = Decimal.max(record.fee?.amount ?? "0", deposit.fee ?? "0").toFixed(2);
     const { amountCredited, settled, absorbedFee } = calculateNairaDepositCredit({
         amountReceived,
         providerFee,

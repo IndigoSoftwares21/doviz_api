@@ -31,6 +31,8 @@ export const nairaDepositTags = [
 
 An \`expired\` account can still be paid late (the bank may be slow); it's credited if the money arrives within a day. The account is only shown while the deposit is \`pending\`.
 
+**Resuming:** \`GET /naira-deposits/active\` returns the deposit in progress (or null) — call it on launch/foreground so a crash, a closed app, a reinstall or another device never loses the account card. Store the \`idempotencyKey\` BEFORE sending the POST: if the app dies mid-request, retrying with it returns the same account.
+
 Send a new UUID \`idempotencyKey\` per deposit and reuse it only to retry after a timeout — the retry returns the same account.`,
     },
 ];
@@ -52,6 +54,7 @@ const nairaDeposit = {
             properties: { accountName: { type: "string", example: "Doviz Checkout" }, accountNumber: { type: "string", example: "9876543210" }, bankName: { type: "string", example: "Wema Bank" } },
         },
         expiresAt: { type: "string", format: "date-time" },
+        expiresInSeconds: { type: "integer", example: 1742, description: "Seconds left to pay, by the server's clock (0 unless `pending`). Drive the countdown from this, not the phone's clock." },
         failureReason: { type: ["string", "null"] },
         createdAt: { type: "string", format: "date-time" },
         completedAt: { type: ["string", "null"], format: "date-time" },
@@ -89,6 +92,16 @@ const nairaDepositPaths = {
                     items: { type: "array", items: nairaDeposit }, limit: { type: "integer", example: 20 }, offset: { type: "integer", example: 0 }, hasMore: { type: "boolean" },
                 } } }) }) },
                 "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"),
+            },
+        },
+    },
+    "/naira-deposits/active": {
+        get: {
+            tags: ["Naira deposits"], summary: "The deposit in progress", operationId: "getActiveNairaDeposit", security: auth,
+            description: "The user's newest deposit whose account can still be paid (`pending`, not past expiry), or `data: null`. Call it on app start / foreground and when opening Add Money to reopen the account card — works after a crash, a reinstall or on another device.",
+            responses: {
+                "200": { description: "The deposit in progress, or null.", content: jsonContent({ schema: dataEnvelope({ message: "Active deposit fetched", code: 200, data: { ...nairaDeposit, type: ["object", "null"] } }) }) },
+                "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"),
             },
         },
     },

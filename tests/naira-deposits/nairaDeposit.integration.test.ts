@@ -8,6 +8,7 @@ import { db, disconnect } from "@/database";
 import createNairaDeposit from "@/actions/nairaDeposit/createNairaDeposit";
 import syncNairaDeposit from "@/actions/nairaDeposit/syncNairaDeposit";
 import fetchOpenNairaDeposits from "@/actions/nairaDeposits/fetchOpenNairaDeposits";
+import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
 import collectionProviderRegistry from "@/services/collections/collectionProviderRegistry";
 import CollectionProviderError from "@/services/collections/collectionProviderError";
 import { LEDGER_ACCOUNT_KIND } from "@/constants/ledger";
@@ -41,8 +42,10 @@ run("naira deposits against Postgres", () => {
             .select(["status", "provider", "fee", "feeBearer", "amountToTransfer", "amountReceived", "providerFee", "amountCredited", "ledgerTransactionId", "finalizedAt"])
             .where("id", "=", id)
             .executeTakeFirstOrThrow();
+    // A distinct amount per deposit: the same amount would (correctly) reuse the open account.
+    let nextAmount = 10000;
     const start = (overrides: { amount?: string; idempotencyKey?: string } = {}) =>
-        createNairaDeposit({ userId, amount: overrides.amount ?? "50000.00", idempotencyKey: overrides.idempotencyKey ?? randomUUID(), ipAddress: null, userAgent: null });
+        createNairaDeposit({ userId, amount: overrides.amount ?? `${(nextAmount += 1)}.00`, idempotencyKey: overrides.idempotencyKey ?? randomUUID(), ipAddress: null, userAgent: null });
 
     beforeAll(async () => {
         const user = await db
@@ -65,7 +68,7 @@ run("naira deposits against Postgres", () => {
     });
 
     beforeEach(() => {
-        createPrimary.mockReset().mockResolvedValue(bankTransferCreated({ providerReference: `ref-${randomUUID()}` }));
+        createPrimary.mockReset().mockImplementation(async () => bankTransferCreated({ providerReference: `ref-${randomUUID()}` }));
         getPrimary.mockReset().mockResolvedValue(null);
         createBackup.mockReset();
         delete process.env.NAIRA_DEPOSIT_FEE_BEARER;
@@ -75,11 +78,13 @@ run("naira deposits against Postgres", () => {
         const before = Number(await userBalance());
         const clearingBefore = Number(await balance(LEDGER_ACCOUNT_KIND.PROVIDER_CLEARING, { provider: primary }));
 
-        const { data, isNew } = await start();
+        const { data, isNew } = await start({ amount: "50000.00" });
         expect(isNew).toBe(true);
         expect(createPrimary.mock.calls[0][0]).toMatchObject({ feeBearer: "user", amount: { amount: "50000.00", currency: "NGN" }, customer: { name: "Ada Obi" } });
         expect(data).toMatchObject({ status: "pending", amount: "50000.00", fee: "375.00", amountToTransfer: "50375.00", feeBearer: "user", bankAccount: { accountNumber: "9876543210" } });
         expect(Number(await userBalance())).toBe(before);
+        expect(data!.expiresInSeconds).toBeGreaterThan(0);
+        await expect(fetchActiveNairaDeposit({ userId })).resolves.toMatchObject({ data: { id: data!.id, status: "pending" } });
 
         getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id }));
         await expect(syncNairaDeposit({ nairaDepositId: data!.id })).resolves.toEqual({ data: { outcome: "credited" } });
@@ -111,11 +116,31 @@ run("naira deposits against Postgres", () => {
     });
 
     it("keeps the fee bearer a deposit was created with, even if the toggle flips", async () => {
+        createPrimary.mockResolvedValue(bankTransferCreated({ providerReference: `ref-${randomUUID()}`, amountToTransfer: { amount: "1010.00", currency: "NGN" }, fee: { amount: "10.00", currency: "NGN" } }));
         const { data } = await start({ amount: "1000.00" });
         process.env.NAIRA_DEPOSIT_FEE_BEARER = "doviz";
         getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id, amountPaid: { amount: "1010.00", currency: "NGN" }, fee: { amount: "10.00", currency: "NGN" } }));
         await syncNairaDeposit({ nairaDepositId: data!.id });
         expect(await deposit(data!.id)).toMatchObject({ feeBearer: "user", amountCredited: "1000.00" });
+    });
+
+    it("never under-counts the fee when the provider's lookup reports less than it quoted", async () => {
+        createPrimary.mockResolvedValue(bankTransferCreated({ providerReference: `ref-${randomUUID()}`, amountToTransfer: { amount: "153.75", currency: "NGN" }, fee: { amount: "53.75", currency: "NGN" } }));
+        const { data } = await start({ amount: "100.00" });
+        getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id, amountPaid: { amount: "153.75", currency: "NGN" }, fee: { amount: "50.00", currency: "NGN" } }));
+        await syncNairaDeposit({ nairaDepositId: data!.id });
+        expect(await deposit(data!.id)).toMatchObject({ providerFee: "53.75", amountCredited: "100.00" });
+    });
+
+    it("reuses the open account for the same amount, but not for a different one", async () => {
+        const first = await start({ amount: "7777.00" });
+        const again = await start({ amount: "7777.00" });
+        expect(again).toMatchObject({ isNew: false, data: { id: first.data!.id } });
+        expect(createPrimary).toHaveBeenCalledTimes(1);
+
+        const other = await start({ amount: "8888.00" });
+        expect(other.isNew).toBe(true);
+        expect(createPrimary).toHaveBeenCalledTimes(2);
     });
 
     it("returns the original deposit for a repeated idempotency key", async () => {
@@ -134,6 +159,8 @@ run("naira deposits against Postgres", () => {
         getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id, status: "pending", amountPaid: null, fee: null }));
         await expect(syncNairaDeposit({ nairaDepositId: data!.id })).resolves.toEqual({ data: { outcome: "expired" } });
         expect(await deposit(data!.id)).toMatchObject({ status: "expired" });
+        const { data: active } = await fetchActiveNairaDeposit({ userId });
+        expect(active?.id).not.toBe(data!.id);
 
         const { data: open } = await fetchOpenNairaDeposits();
         expect(open.map((row) => row.id)).toContain(data!.id);

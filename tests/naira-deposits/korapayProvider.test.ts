@@ -56,6 +56,16 @@ describe("getKorapayConfig", () => {
         process.env.KORAPAY_SECRET_KEY = "sk_test_abc";
         expect(() => getKorapayConfig()).toThrow(/test key but KORAPAY_ENV is production/);
     });
+
+    it("builds the charge webhook URL from API_PUBLIC_URL, or leaves it to the dashboard", () => {
+        process.env.KORAPAY_ENV = "sandbox";
+        process.env.KORAPAY_SECRET_KEY = "sk_test_abc";
+        process.env.API_VERSION = "v1";
+        process.env.API_PUBLIC_URL = "https://api.doviz.app/";
+        expect(getKorapayConfig().webhookUrl).toBe("https://api.doviz.app/api/v1/webhooks/korapay");
+        delete process.env.API_PUBLIC_URL;
+        expect(getKorapayConfig().webhookUrl).toBeNull();
+    });
 });
 
 describe("KorapayCollectionProvider.createBankTransfer", () => {
@@ -145,6 +155,14 @@ describe("KorapayCollectionProvider.getBankTransfer", () => {
     ])("maps Korapay status %s to %s", async (status, expected) => {
         const http = new FakeKorapayHttp().reply(`GET /charges/${DEPOSIT_ID}`, ok({ reference: DEPOSIT_ID, status, amount: 50000 }));
         await expect(get(http)).resolves.toMatchObject({ status: expected, amountPaid: null });
+    });
+
+    it("treats an unpaid charge's zero amount_paid and fee as unknown (real sandbox shape)", async () => {
+        const http = new FakeKorapayHttp().reply(
+            `GET /charges/${DEPOSIT_ID}`,
+            ok({ reference: DEPOSIT_ID, status: "processing", amount: "100.00", amount_paid: "0.00", fee: 0, currency: "NGN" }),
+        );
+        await expect(get(http)).resolves.toMatchObject({ status: "pending", amountPaid: null, fee: null });
     });
 
     it("returns null when Korapay has no such charge", async () => {
