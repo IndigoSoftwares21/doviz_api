@@ -4,11 +4,7 @@ import FLUTTERWAVE from "./constants";
 import { FlutterwaveBillItem } from "./flutterwaveTypes";
 import { toFlutterwaveProductRef } from "./flutterwaveProductRef";
 import toFlutterwaveMoney from "./toFlutterwaveMoney";
-
-const validityDays = (value: FlutterwaveBillItem["validity_period"]) => {
-    const days = Number(value);
-    return Number.isInteger(days) && days > 0 ? days : null;
-};
+import parseFlutterwaveValidity from "./parseFlutterwaveValidity";
 
 /**
  * Flutterwave's flat item list → raw billers + products. Translation only:
@@ -50,7 +46,7 @@ const mapFlutterwaveCatalog = ({ items }: { items: FlutterwaveBillItem[] }): Pro
             price,
             minAmount: null,
             maxAmount: null,
-            validityDays: validityDays(item.validity_period),
+            validityDays: parseFlutterwaveValidity({ value: item.validity_period }),
         });
     }
 

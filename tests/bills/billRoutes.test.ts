@@ -103,7 +103,7 @@ describe("bill routes", () => {
 
     it("lists a biller's products", async () => {
         jest.mocked(selectListableBiller).mockResolvedValue({ id: BILLER_ID });
-        const product = { id: PRODUCT_ID, name: "1.5GB", amountType: "fixed", currency: "NGN", price: "1000.00", minAmount: null, maxAmount: null, serviceFee: "0.00", validityDays: 30 };
+        const product = { id: PRODUCT_ID, name: "1.5GB", amountType: "fixed", currency: "NGN", price: "1000.00", minAmount: null, maxAmount: null, serviceFee: "0.00", validityDays: 30, validityGroup: "monthly" as const };
         jest.mocked(fetchBillProducts).mockResolvedValue({ data: [product] });
 
         const response = await get(`/billers/${BILLER_ID}/products`);
@@ -219,6 +219,27 @@ describe("bill routes", () => {
             expect(response.body.validationErrors.map((error: { path: string[] }) => error.path[0]).sort()).toEqual(["amount", "idempotencyKey"]);
         });
 
+        it.each([
+            ["customer_not_found", 400, "We couldn't find this customer number. Check it and try again."],
+            ["provider_unavailable", 503, "Bill payments are temporarily unavailable. Please try again shortly."],
+        ])("reports a %s customer check as %i", async (failure, status, message) => {
+            jest.mocked(selectListableBillProduct).mockResolvedValue(meterProduct);
+            jest.mocked(createBillPayment).mockResolvedValue({ data: null, failure, verification: verified, isNew: false, limits: null } as never);
+            const response = await pay({ customerId: "45067198783", amount: "1000.00" });
+            expect(response.status).toBe(status);
+            expect(response.body.message).toBe(message);
+        });
+
+        it("explains the meter's own limits", async () => {
+            jest.mocked(selectListableBillProduct).mockResolvedValue(meterProduct);
+            jest.mocked(createBillPayment).mockResolvedValue({
+                data: null, failure: ACTION_FAILURE.AMOUNT_OUT_OF_RANGE, verification: verified, isNew: false, limits: { minAmount: "1500.00", maxAmount: null },
+            } as never);
+            const response = await pay({ customerId: "45067198783", amount: "1000.00" });
+            expect(response.status).toBe(400);
+            expect(response.body.message).toBe("For this customer the amount must be at least ₦1,500.00");
+        });
+
         it("answers 402 when the balance doesn't cover it", async () => {
             jest.mocked(selectListableBillProduct).mockResolvedValue(bundleProduct);
             jest.mocked(createBillPayment).mockResolvedValue({ data: null, failure: ACTION_FAILURE.INSUFFICIENT_BALANCE, verification: verified, isNew: false } as never);
@@ -240,11 +261,11 @@ describe("bill routes", () => {
     });
 
     describe("GET /payments", () => {
-        it("returns one payment, refreshing it with the provider", async () => {
+        it("returns one payment as we have it (no provider call)", async () => {
             jest.mocked(fetchBillPayment).mockResolvedValue({ data: paymentView } as never);
             const response = await get(`/payments/${paymentView.id}`);
             expect(response.status).toBe(200);
-            expect(fetchBillPayment).toHaveBeenCalledWith({ userId: "user-1", billPaymentId: paymentView.id, refresh: true });
+            expect(fetchBillPayment).toHaveBeenCalledWith({ userId: "user-1", billPaymentId: paymentView.id });
         });
 
         it("404s for a payment that isn't the user's", async () => {

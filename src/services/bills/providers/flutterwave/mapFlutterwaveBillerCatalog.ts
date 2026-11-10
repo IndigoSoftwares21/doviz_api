@@ -4,17 +4,13 @@ import FLUTTERWAVE from "./constants";
 import { FlutterwaveBiller, FlutterwaveBillerItem } from "./flutterwaveTypes";
 import { toFlutterwaveProductRef } from "./flutterwaveProductRef";
 import toFlutterwaveMoney from "./toFlutterwaveMoney";
+import parseFlutterwaveValidity from "./parseFlutterwaveValidity";
 
 export interface FlutterwaveBillerGroup {
     category: BillCategory;
     biller: FlutterwaveBiller;
     items: FlutterwaveBillerItem[];
 }
-
-const validityDays = (value: FlutterwaveBillerItem["validity_period"]) => {
-    const days = Number(value);
-    return Number.isInteger(days) && days > 0 ? days : null;
-};
 
 /**
  * Flutterwave billers (with the category Flutterwave files them under) and
@@ -56,7 +52,7 @@ const mapFlutterwaveBillerCatalog = ({ groups }: { groups: FlutterwaveBillerGrou
                 price,
                 minAmount: null,
                 maxAmount: null,
-                validityDays: validityDays(item.validity_period),
+                validityDays: parseFlutterwaveValidity({ value: item.validity_period }),
             };
             catalog.products.push(product);
         }

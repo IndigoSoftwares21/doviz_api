@@ -15,6 +15,7 @@ const selectPaymentProduct = async ({ productId }: { productId: string }) => {
             "bill_products.serviceFee",
             "billers.id as billerId",
             "billers.name as billerName",
+            "billers.requiresValidation",
             eb.fn.coalesce("bill_products.displayName", "bill_products.name").as("productName"),
         ])
         .where("bill_products.id", "=", productId)

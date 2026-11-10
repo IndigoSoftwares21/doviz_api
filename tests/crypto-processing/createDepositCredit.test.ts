@@ -6,6 +6,7 @@ import selectCurrentMarkup from "@/actions/depositCredit/createDepositCredit/que
 import updateDepositCompleted from "@/actions/depositCredit/createDepositCredit/queries/updateDepositCompleted";
 import { depositRecord } from "./fakeProvider";
 
+jest.mock("@/services/realtime/publishUserEvent");
 jest.mock("@/actions/ledger/createLedgerPosting");
 jest.mock("@/actions/auditLog/createAuditLog");
 jest.mock("@/actions/depositCredit/createDepositCredit/queries/selectCurrentMarkup");

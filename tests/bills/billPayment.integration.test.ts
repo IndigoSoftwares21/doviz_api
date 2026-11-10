@@ -24,9 +24,11 @@ run("bill payments against Postgres", () => {
     const provider = `fb${tag}`;
     const payBill = jest.fn();
     const getBillPayment = jest.fn();
+    const validateCustomer = jest.fn();
     let userId: string;
     let bundleId: string;
     let airtimeId: string;
+    let prepaidId: string;
 
     const balance = async (kind: string, owner: { userId?: string; provider?: string } = {}) => {
         const row = await db
@@ -42,11 +44,11 @@ run("bill payments against Postgres", () => {
     const userBalance = () => balance(LEDGER_ACCOUNT_KIND.USER_AVAILABLE, { userId });
     const payment = (id: string) =>
         db.selectFrom("bill_payments").select(["status", "providerReference", "token", "providerCost", "failureReason", "total"]).where("id", "=", id).executeTakeFirstOrThrow();
-    const pay = (overrides: { productId?: string; amount?: string | null; idempotencyKey?: string } = {}) =>
+    const pay = (overrides: { productId?: string; amount?: string | null; idempotencyKey?: string; customerId?: string } = {}) =>
         createBillPayment({
             userId,
             productId: overrides.productId ?? bundleId,
-            customerId: "08038291822",
+            customerId: overrides.customerId ?? "08038291822",
             amount: overrides.amount ?? null,
             idempotencyKey: overrides.idempotencyKey ?? randomUUID(),
             pin: "4827",
@@ -87,13 +89,20 @@ run("bill payments against Postgres", () => {
             providerName: "AIRTIME", name: "Airtime", amountType: "range", currency: "NGN", minAmount: "50.00", maxAmount: "50000.00", serviceFee: "0.00", isAvailable: true, isEnabled: true,
         }).returning(["id"]).executeTakeFirstOrThrow()).id;
 
+        prepaidId = (await db.insertInto("bill_products").values({
+            billerProviderRefId: await ref("ikeja-electric"), provider, environment: "sandbox", providerProductRef: `BIL113:UB159-${tag}`,
+            providerName: "IKEDC PREPAID", name: "Prepaid", amountType: "range", currency: "NGN", minAmount: "500.00", maxAmount: "500000.00",
+            serviceFee: "0.00", isAvailable: true, isEnabled: true,
+        }).returning(["id"]).executeTakeFirstOrThrow()).id;
+
         billProviderRegistry.reset();
-        billProviderRegistry.register(makeFakeBillProvider({ name: provider, payBill, getBillPayment }));
+        billProviderRegistry.register(makeFakeBillProvider({ name: provider, payBill, getBillPayment, validateCustomer }));
     });
 
     beforeEach(() => {
         payBill.mockReset();
         getBillPayment.mockReset();
+        validateCustomer.mockReset();
         jest.mocked(createPinVerification).mockResolvedValue({ data: { status: "verified" } });
         jest.spyOn(console, "error").mockImplementation(() => undefined);
         jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -185,6 +194,48 @@ run("bill payments against Postgres", () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         expect((await payment(data!.id)).providerReference).toBe("CF-SLOW");
         shortWait.restore();
+    });
+
+    describe("meter numbers are checked by the server before any money moves", () => {
+        const meter = { productId: "", customerId: "45067198783", amount: "1000.00" };
+        beforeEach(() => (meter.productId = prepaidId));
+
+        it("pays a meter the provider knows, keeping the name on it", async () => {
+            validateCustomer.mockResolvedValue({ customerName: "ADA OKAFOR", address: null, minAmount: null, maxAmount: null });
+            payBill.mockImplementation(async ({ externalId }) => billPaymentRecord({ externalId, providerReference: "CF-MTR" }));
+
+            const { data } = await pay(meter);
+            expect(validateCustomer).toHaveBeenCalledWith({ providerProductRef: `BIL113:UB159-${tag}`, customerId: "45067198783" });
+            expect(data).toMatchObject({ status: "pending", customerName: "ADA OKAFOR" });
+        });
+
+        it("refuses an unknown meter without touching the balance", async () => {
+            validateCustomer.mockRejectedValue(new BillProviderError({ code: "rejected", status: 400, providerMessage: "Invalid meter" }));
+            const before = await userBalance();
+
+            const result = await pay(meter);
+            expect(result).toMatchObject({ data: null, failure: "customer_not_found" });
+            expect(payBill).not.toHaveBeenCalled();
+            expect(await userBalance()).toBe(before);
+        });
+
+        it("applies the meter's own limits", async () => {
+            validateCustomer.mockResolvedValue({ customerName: "ADA OKAFOR", address: null, minAmount: "1500.00", maxAmount: null });
+            const before = await userBalance();
+
+            const result = await pay(meter);
+            expect(result).toMatchObject({ data: null, failure: "amount_out_of_range", limits: { minAmount: "1500.00", maxAmount: null } });
+            expect(await userBalance()).toBe(before);
+        });
+
+        it("takes nothing when the provider can't check the meter", async () => {
+            validateCustomer.mockRejectedValue(new BillProviderError({ code: "unavailable", status: null, providerMessage: null }));
+            const before = await userBalance();
+
+            expect(await pay(meter)).toMatchObject({ data: null, failure: "provider_unavailable" });
+            expect(payBill).not.toHaveBeenCalled();
+            expect(await userBalance()).toBe(before);
+        });
     });
 
     it("refuses a payment the balance can't cover, leaving no trace", async () => {

@@ -10,6 +10,7 @@ interface IInsertBillPayment {
     provider: string;
     idempotencyKey: string;
     customerId: string;
+    customerName: string | null;
     currency: string;
     amount: string;
     serviceFee: string;
@@ -26,6 +27,7 @@ const insertBillPayment = async ({
     provider,
     idempotencyKey,
     customerId,
+    customerName,
     currency,
     amount,
     serviceFee,
@@ -42,6 +44,7 @@ const insertBillPayment = async ({
             provider,
             idempotencyKey,
             customerId,
+            customerName: customerName?.slice(0, 150) ?? null,
             currency,
             amount,
             serviceFee,

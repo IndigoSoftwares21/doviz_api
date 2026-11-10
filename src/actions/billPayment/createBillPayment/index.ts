@@ -15,6 +15,7 @@ import scheduleBillPaymentChecks from "./utils/scheduleBillPaymentChecks";
 import monitoring from "@/utils/monitoring";
 import isInsufficientBalanceError from "./utils/isInsufficientBalanceError";
 import isIdempotencyConflictError from "./utils/isIdempotencyConflictError";
+import checkPaymentCustomer from "./utils/checkPaymentCustomer";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import AUDIT_ACTIONS from "@/constants/auditActions";
@@ -35,22 +36,23 @@ interface ICreateBillPayment {
 }
 
 /**
- * Pays a bill from the user's balance: PIN → hold the money and record the
- * payment (one transaction; the ledger refuses an overdraft) → send it to
- * the provider → return it. Waits for the provider only up to
+ * Pays a bill from the user's balance: PIN → check the customer with the
+ * provider (meters, smartcards — before any money moves) → hold the money
+ * and record the payment (one transaction; the ledger refuses an overdraft)
+ * → send it to the provider → return it. Waits for the provider only up to
  * BILLS.SUBMIT_WAIT_MS; a slower provider finishes in the background and the
- * app sees the result by polling. Repeating a request with the same
+ * app hears the result over the socket. Repeating a request with the same
  * idempotency key returns the original payment instead of paying twice.
  */
 const createBillPayment = async ({ userId, productId, customerId, amount, idempotencyKey, pin, ipAddress, userAgent }: ICreateBillPayment) => {
     const { data: verification } = await createPinVerification({ userId, pin, ipAddress, userAgent });
-    if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return { data: null, failure: ACTION_FAILURE.PIN, verification, isNew: false };
+    if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return { data: null, failure: ACTION_FAILURE.PIN, verification, isNew: false, limits: null };
 
     const replay = async () => {
         const existing = await selectBillPaymentIdByIdempotencyKey({ userId, idempotencyKey });
         if (!existing) return null;
         const { data } = await fetchBillPayment({ userId, billPaymentId: existing.id });
-        return { data, failure: null, verification, isNew: false };
+        return { data, failure: null, verification, isNew: false, limits: null };
     };
 
     const previous = await replay();
@@ -59,6 +61,16 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
     const product = await selectPaymentProduct({ productId });
     const chargeAmount = new Decimal(product.amountType === BILL_AMOUNT_TYPE.FIXED ? product.price! : amount!).toFixed(2);
     const total = new Decimal(chargeAmount).plus(product.serviceFee).toFixed(2);
+
+    const check = await checkPaymentCustomer({
+        provider: product.provider,
+        providerProductRef: product.providerProductRef,
+        requiresValidation: product.requiresValidation,
+        customerId,
+        amount: chargeAmount,
+    });
+    if (check.failure) return { data: null, failure: check.failure, verification, isNew: false, limits: check.limits };
+
     const id = randomUUID();
 
     try {
@@ -85,6 +97,7 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
                 provider: product.provider,
                 idempotencyKey,
                 customerId,
+                customerName: check.customerName,
                 currency: product.currency,
                 amount: chargeAmount,
                 serviceFee: product.serviceFee,
@@ -108,7 +121,7 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
             await publishUserEvent({ trx, userId, event: REALTIME_EVENT.WALLET_BALANCE_CHANGED });
         });
     } catch (error) {
-        if (isInsufficientBalanceError({ error })) return { data: null, failure: ACTION_FAILURE.INSUFFICIENT_BALANCE, verification, isNew: false };
+        if (isInsufficientBalanceError({ error })) return { data: null, failure: ACTION_FAILURE.INSUFFICIENT_BALANCE, verification, isNew: false, limits: null };
         if (isIdempotencyConflictError({ error })) {
             const raced = await replay();
             if (raced) return raced;
@@ -131,7 +144,7 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
 
     const { data } = await fetchBillPayment({ userId, billPaymentId: id });
     if (data && (data.status === "pending" || data.status === "processing")) scheduleBillPaymentChecks({ billPaymentId: id });
-    return { data, failure: null, verification, isNew: true };
+    return { data, failure: null, verification, isNew: true, limits: null };
 };
 
 export default createBillPayment;

@@ -114,6 +114,7 @@ const billPaths = {
                         maxAmount: money(null, "Set for range products; null for fixed."),
                         serviceFee: money("0.00", "Added on top of the amount."),
                         validityDays: { type: ["integer", "null"], example: 30, description: "How long a bundle or plan lasts, when known." },
+                        validityGroup: { type: "string", enum: ["daily", "weekly", "monthly", "quarterly", "long_term", "other"], example: "monthly", description: "For tabbing plans: daily 1–2 days, weekly 3–14, monthly 15–45, quarterly 46–120, long_term over 120, other when unknown." },
                     } } } }),
                     example: { message: "Bill products fetched", code: 200, data: [
                         { id: "3f1c2a52-6a0e-4f5b-9a57-2f5f1d0c9b10", name: "Prepaid", amountType: "range", currency: "NGN", price: null, minAmount: "500.00", maxAmount: "500000.00", serviceFee: "0.00", validityDays: null },
@@ -169,7 +170,7 @@ const billPaths = {
     "/bills/payments": {
         post: {
             tags: ["Bills"], summary: "Pay a bill", operationId: "postBillPayment", security: auth,
-            description: "Requires the transfer PIN. Takes `total` from the naira balance immediately and submits the payment. Returns `201` for a new payment, or `200` with the original payment when the `idempotencyKey` was already used.",
+            description: "Requires the transfer PIN. For billers with `requiresValidation` (meters, smartcards) the server checks the number with the biller first — an unknown number, or an amount outside that customer's own limits, is refused before any money moves. Then it takes `total` from the naira balance and submits the payment. Returns `201` for a new payment, or `200` with the original payment when the `idempotencyKey` was already used.",
             requestBody: { required: true, content: jsonContent({
                 schema: { type: "object", required: ["productId", "customerId", "idempotencyKey", "pin"], properties: {
                     productId: { type: "string", format: "uuid" },
@@ -183,10 +184,11 @@ const billPaths = {
             responses: {
                 "201": { description: "Submitted (usually `pending`).", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment submitted", code: 201, data: billPayment }) }) },
                 "200": { description: "This idempotencyKey was already used — the original payment.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment already submitted", code: 200, data: billPayment }) }) },
-                "400": error("Validation failed (amount out of range, invalid customer number, unavailable product) or wrong PIN.", "Validation failed", 400),
+                "400": error("Validation failed (amount out of range, invalid customer number, unavailable product), the biller has no such customer, the amount is outside this customer's limits, or wrong PIN.", "For this customer the amount must be at least ₦1,500.00", 400),
                 "401": ref("Unauthorized"),
                 "402": error("The balance doesn't cover `total`.", "You don't have enough balance for this payment", 402),
                 "403": ref("Forbidden"), "423": ref("PinLocked"), "500": ref("ServerError"),
+                "503": error("The biller can't check the customer right now; nothing was charged.", "Bill payments are temporarily unavailable. Please try again shortly.", 503),
             },
         },
         get: {
