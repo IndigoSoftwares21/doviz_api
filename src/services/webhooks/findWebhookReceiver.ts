@@ -1,9 +1,10 @@
 import providerRegistry from "@/services/crypto/providerRegistry";
 import billProviderRegistry from "@/services/bills/billProviderRegistry";
+import collectionProviderRegistry from "@/services/collections/collectionProviderRegistry";
 import { WebhookRequest } from "@/services/crypto/cryptoProvider";
 import { ProviderWebhookEvent } from "@/services/crypto/types";
 
-/** Anything that can authenticate and read its own webhooks (crypto and bill providers alike). */
+/** Anything that can authenticate and read its own webhooks (crypto, bill and collection providers alike). */
 export interface WebhookReceiver {
     readonly name: string;
     verifyWebhook(request: WebhookRequest): boolean;
@@ -20,6 +21,7 @@ export interface WebhookReceiver {
 const findWebhookReceiver = ({ name }: { name: string }): WebhookReceiver | null => {
     if (providerRegistry.has({ name })) return providerRegistry.get({ name });
     if (billProviderRegistry.has({ name })) return billProviderRegistry.get({ name });
+    if (collectionProviderRegistry.has({ name })) return collectionProviderRegistry.get({ name });
     return null;
 };
 

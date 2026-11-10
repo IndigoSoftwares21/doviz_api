@@ -38,6 +38,7 @@ export const WEBHOOK_RESOURCE_TYPE = {
     DEPOSIT: "deposit",
     PAYOUT: "payout",
     BILL_PAYMENT: "bill_payment",
+    NAIRA_DEPOSIT: "naira_deposit",
     OTHER: "other",
 } as const;
 

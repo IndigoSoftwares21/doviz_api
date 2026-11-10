@@ -17,6 +17,8 @@ const REALTIME = {
 export const REALTIME_EVENT = {
     /** { billPaymentId, status } — a bill payment was created, completed or refunded. */
     BILL_PAYMENT_UPDATED: "bill_payment.updated",
+    /** { nairaDepositId, status } — a naira deposit was completed, expired or failed. */
+    NAIRA_DEPOSIT_UPDATED: "naira_deposit.updated",
     /** {} — the naira balance changed (payment held, refund, deposit credited). */
     WALLET_BALANCE_CHANGED: "wallet.balance_changed",
 } as const;

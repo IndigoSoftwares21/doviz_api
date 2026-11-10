@@ -322,6 +322,33 @@ export interface Database {
     createdAt: Generated<Date>;
   };
 
+  naira_deposits: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    provider: ColumnType<string>;
+    providerReference: ColumnType<string | null>;
+    idempotencyKey: ColumnType<string>;
+    currency: ColumnType<string>;
+    amount: ColumnType<string>;
+    feeBearer: ColumnType<string>;
+    fee: ColumnType<string | null>;
+    amountToTransfer: ColumnType<string | null>;
+    accountName: ColumnType<string | null>;
+    accountNumber: ColumnType<string | null>;
+    bankName: ColumnType<string | null>;
+    expiresAt: ColumnType<Date | null>;
+    amountReceived: ColumnType<string | null>;
+    providerFee: ColumnType<string | null>;
+    amountCredited: ColumnType<string | null>;
+    status: ColumnType<string>;
+    failureReason: ColumnType<string | null>;
+    ledgerTransactionId: ColumnType<string | null>;
+    paidAt: ColumnType<Date | null>;
+    finalizedAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
   payout_banks: {
     id: Generated<string>;
     name: ColumnType<string>;

@@ -6,6 +6,7 @@ export const LEDGER_ACCOUNT_KIND = {
     MARKUP_REVENUE: "markup_revenue",
     BILLS_IN_TRANSIT: "bills_in_transit",
     BILL_REVENUE: "bill_revenue",
+    PROVIDER_FEES: "provider_fees",
 } as const;
 
 export const LEDGER_TRANSACTION_TYPE = {
@@ -16,6 +17,7 @@ export const LEDGER_TRANSACTION_TYPE = {
     BILL_HOLD: "bill_hold",
     BILL_SETTLE: "bill_settle",
     BILL_REVERSAL: "bill_reversal",
+    NAIRA_DEPOSIT: "naira_deposit",
 } as const;
 
 export type LedgerAccountKind = (typeof LEDGER_ACCOUNT_KIND)[keyof typeof LEDGER_ACCOUNT_KIND];

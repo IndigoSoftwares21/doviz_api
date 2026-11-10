@@ -8,7 +8,8 @@ export type LedgerAccountRef =
           kind:
               | typeof LEDGER_ACCOUNT_KIND.PROVIDER_CLEARING
               | typeof LEDGER_ACCOUNT_KIND.PAYOUTS_IN_TRANSIT
-              | typeof LEDGER_ACCOUNT_KIND.BILLS_IN_TRANSIT;
+              | typeof LEDGER_ACCOUNT_KIND.BILLS_IN_TRANSIT
+              | typeof LEDGER_ACCOUNT_KIND.PROVIDER_FEES;
           provider: string;
       }
     | { kind: typeof LEDGER_ACCOUNT_KIND.MARKUP_REVENUE | typeof LEDGER_ACCOUNT_KIND.BILL_REVENUE };

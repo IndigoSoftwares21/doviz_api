@@ -3,11 +3,13 @@ import withAdvisoryLock from "./withAdvisoryLock";
 import sweepWebhookEvents from "./sweepWebhookEvents";
 import reconcileDeposits from "./reconcileDeposits";
 import reconcileBillPayments from "./reconcileBillPayments";
+import reconcileNairaDeposits from "./reconcileNairaDeposits";
 
 const JOBS = [
     { name: "sweep-webhook-events", lockKey: 7301001, intervalMs: 60_000, run: sweepWebhookEvents },
     { name: "reconcile-deposits", lockKey: 7301002, intervalMs: 10 * 60_000, run: reconcileDeposits },
     { name: "reconcile-bill-payments", lockKey: 7301003, intervalMs: 2 * 60_000, run: reconcileBillPayments },
+    { name: "reconcile-naira-deposits", lockKey: 7301004, intervalMs: 2 * 60_000, run: reconcileNairaDeposits },
 ];
 
 /**

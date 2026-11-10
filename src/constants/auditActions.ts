@@ -26,6 +26,8 @@ const AUDIT_ACTIONS = {
     BILL_PAYMENT_REQUESTED: "bills.payment.requested",
     BILL_PAYMENT_COMPLETED: "bills.payment.completed",
     BILL_PAYMENT_REFUNDED: "bills.payment.refunded",
+    NAIRA_DEPOSIT_REQUESTED: "wallet.naira_deposit.requested",
+    NAIRA_DEPOSIT_CREDITED: "wallet.naira_deposit.credited",
     PROVIDER_WEBHOOK_REJECTED: "provider.webhook.rejected",
     PIN_CREATED: "security.pin.created",
     PIN_CHANGED: "security.pin.changed",

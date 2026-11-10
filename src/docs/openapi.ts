@@ -5,6 +5,7 @@ import cryptoPaths from "@/docs/paths/cryptoPaths";
 import walletPaths from "@/docs/paths/wallet";
 import bankPaths from "@/docs/paths/bankPaths";
 import billPaths, { billTags } from "@/docs/paths/billPaths";
+import nairaDepositPaths, { nairaDepositTags } from "@/docs/paths/nairaDepositPaths";
 
 const json = (schema: object, example?: object) => ({
     "application/json": example ? { schema, example } : { schema },
@@ -72,6 +73,7 @@ Limited endpoints return \`429\` when exceeded, with standard \`RateLimit\` / \`
     tags: [
         ...cryptoTags,
         ...billTags,
+        ...nairaDepositTags,
         { name: "Health", description: "Service status." },
         {
             name: "Phone login",
@@ -406,6 +408,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
         ...walletPaths,
         ...bankPaths,
         ...billPaths,
+        ...nairaDepositPaths,
         "/health": {
             get: {
                 tags: ["Health"],

@@ -24,6 +24,8 @@ const describeStatementEntry = ({
             return "Bill payment";
         case LEDGER_TRANSACTION_TYPE.BILL_REVERSAL:
             return "Bill payment refunded";
+        case LEDGER_TRANSACTION_TYPE.NAIRA_DEPOSIT:
+            return "Bank transfer deposit";
         default:
             return "Wallet adjustment";
     }
