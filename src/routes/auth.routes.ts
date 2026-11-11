@@ -21,6 +21,7 @@ import deleteDevice from "@/controllers/device/delete";
 import sessionUnlockLimiter from "@/middlewares/rateLimit/sessionUnlockLimiter";
 import otpRequestLimiter from "@/middlewares/rateLimit/otpRequestLimiter";
 import loginLimiter from "@/middlewares/rateLimit/loginLimiter";
+import postSessionExtension from "@/controllers/sessionExtension/post";
 import requireAuth from "@/middlewares/requireAuth";
 
 const router = Router();
@@ -31,6 +32,8 @@ router.post("/login", loginLimiter, postLogin);
 // Idle unlock on a trusted device — authenticated by the refresh token.
 router.post("/session/unlock", sessionUnlockLimiter, postSessionUnlock);
 router.post("/session/challenge", sessionUnlockLimiter, postSessionChallenge);
+// While the app is in use: a new access token for a still-valid one (no PIN). Idle → it expires → unlock.
+router.post("/session/extend", requireAuth, postSessionExtension);
 router.post("/logout", requireAuth, postLogout);
 
 router.get("/devices", requireAuth, getDevices);

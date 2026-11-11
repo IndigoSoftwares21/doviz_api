@@ -762,6 +762,35 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
                 },
             },
         },
+        "/auth/session/extend": {
+            post: {
+                tags: ["Session"],
+                summary: "Keep an active session going",
+                operationId: "postSessionExtension",
+                security: [{ BearerAuth: [] }],
+                description: `Returns a fresh access token for a session whose current access token is **still valid**. The app calls it shortly before the token expires, but only while the user is actively using it — so an app in use never drops to the lock screen.
+
+- No PIN: the caller must already hold a valid token. Once it has expired (the user went idle), only \`POST /auth/session/unlock\` gets a new one.
+- The refresh token is unchanged. Reconnect the realtime socket with the new token.
+- Responses carry \`Cache-Control: no-store\`.`,
+                responses: {
+                    "200": {
+                        description: "A new access token.",
+                        content: json({
+                            type: "object",
+                            properties: {
+                                message: { type: "string", example: "Session extended" },
+                                code: { type: "integer", example: 200 },
+                                data: { type: "object", properties: { accessToken: { type: "string" }, accessTokenExpiresAt: { type: "string", format: "date-time" } } },
+                            },
+                        }),
+                    },
+                    "401": { $ref: "#/components/responses/Unauthorized" },
+                    "403": { $ref: "#/components/responses/Forbidden" },
+                    "500": { $ref: "#/components/responses/ServerError" },
+                },
+            },
+        },
         "/auth/logout": {
             post: {
                 tags: ["Session"],
