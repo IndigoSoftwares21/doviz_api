@@ -14,6 +14,8 @@ const fetchUser = async ({ userId, deviceId }: { userId: string; deviceId: strin
         firstName: user.firstName,
         middleName: user.middleName,
         lastName: user.lastName,
+        /** The Ziktag (@handle), lowercase without "@"; null until chosen. */
+        tag: user.tag,
         email: user.email,
         emailVerifiedAt: user.emailVerifiedAt,
         accountStatus: user.status,

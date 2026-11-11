@@ -35,7 +35,7 @@ export const billTags = [
 
 Send a new UUID \`idempotencyKey\` for each payment and **reuse it when retrying** after a timeout or network error — the retry returns the original payment instead of paying twice.
 
-- Every id and name here is Doviz's own — the same whichever bill provider is behind it, so the app never changes when the provider does.
+- Every id and name here is Ziks's own — the same whichever bill provider is behind it, so the app never changes when the provider does.
 - A product's \`amountType\` is \`fixed\` (pay exactly \`price\`, e.g. a data bundle) or \`range\` (any amount from \`minAmount\` to \`maxAmount\`, e.g. airtime or electricity). The user is charged the amount plus \`serviceFee\`.
 - Customer numbers: phone numbers here are **local** (\`08038291822\`) — they're the line being topped up, not a login. Spaces and dashes are dropped. Check them against the biller's \`customerIdPattern\` before sending.
 - Lists only contain what can be bought right now; they can change between calls, so don't cache them for long.`,
@@ -209,7 +209,7 @@ const billPaths = {
     "/bills/payments/{billPaymentId}": {
         get: {
             tags: ["Bills"], summary: "A bill payment", operationId: "getBillPayment", security: auth,
-            description: "The payment as Doviz has it. Fetch it when a `bill_payment.updated` socket event names it (and when the socket reconnects). Doesn't call the biller.",
+            description: "The payment as Ziks has it. Fetch it when a `bill_payment.updated` socket event names it (and when the socket reconnects). Doesn't call the biller.",
             parameters: [{ name: "billPaymentId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
             responses: {
                 "200": { description: "The payment.", content: jsonContent({ schema: dataEnvelope({ message: "Bill payment fetched", code: 200, data: billPayment }) }) },

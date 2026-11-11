@@ -522,6 +522,14 @@ export interface Database {
     createdAt: Generated<Date>;
   };
 
+  user_tag_history: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    tag: ColumnType<string>;
+    releasedAt: Generated<Date>;
+    heldUntil: ColumnType<Date>;
+  };
+
   users: {
     id: Generated<string>;
     phoneNumber: ColumnType<string>;
@@ -536,6 +544,8 @@ export interface Database {
     lastName: ColumnType<string | null>;
     nameUpdatedAt: ColumnType<Date | null>;
     status: ColumnType<string>;
+    tag: ColumnType<string | null>;
+    tagChangedAt: ColumnType<Date | null>;
   };
 
 }

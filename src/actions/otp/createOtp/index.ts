@@ -10,6 +10,7 @@ import updateLiveOtps from "./queries/updateLiveOtps";
 import insertOtp from "./queries/insertOtp";
 import { AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 import { AUDIT_ACTOR_TYPE } from "@/constants/auditTargets";
+import BRAND from "@/constants/brand";
 
 interface ICreateOtp {
     phoneNumber: string;
@@ -40,7 +41,7 @@ const createOtp = async ({
     // the resend cooldown isn't triggered by a message that never arrived.
     await sendSms({
         to: phoneNumber,
-        message: `Your Doviz ${SMS_ACTION[purpose]} is ${otp}. It expires in ${AUTH.OTP_TTL_SECONDS / 60} minutes. Never share this code with anyone, including Doviz staff.`,
+        message: `Your ${BRAND.NAME} ${SMS_ACTION[purpose]} is ${otp}. It expires in ${AUTH.OTP_TTL_SECONDS / 60} minutes. Never share this code with anyone, including ${BRAND.NAME} staff.`,
     });
 
     const data = await withTransaction(async (trx) => {

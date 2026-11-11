@@ -1,6 +1,6 @@
 # Buy crypto (crypto sends)
 
-Users spend naira from their Doviz balance and receive crypto at **their own
+Users spend naira from their Ziks balance and receive crypto at **their own
 wallet address**. We never hold private keys: a provider sends the coin from a
 balance we top up by hand. KuCoin is the first provider; any provider that can
 "send coin X on network Y to an address" can be added behind the same interface.

@@ -14,6 +14,7 @@ import ACTION_FAILURE from "@/constants/actionFailure";
 import AUDIT_ACTIONS from "@/constants/auditActions";
 import NAIRA_DEPOSITS from "@/constants/nairaDeposits";
 import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
+import BRAND from "@/constants/brand";
 
 interface ICreateNairaDeposit {
     userId: string;
@@ -60,7 +61,7 @@ const createNairaDeposit = async ({ userId, amount, idempotencyKey, ipAddress, u
         amount: { amount, currency: NAIRA_DEPOSITS.CURRENCY },
         feeBearer,
         customer: { name, email: customer.email },
-        narration: "Doviz wallet top-up",
+        narration: `${BRAND.NAME} wallet top-up`,
     });
     if (!issued) return { data: null, failure: ACTION_FAILURE.PROVIDER_UNAVAILABLE, isNew: false };
 

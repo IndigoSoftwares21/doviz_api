@@ -1,3 +1,5 @@
+import BRAND from "@/constants/brand";
+
 /** Withdrawals to the user's own bank. Values match the DB CHECK constraints. */
 const WITHDRAWALS = {
     CURRENCY: "NGN",
@@ -13,7 +15,7 @@ const WITHDRAWALS = {
     FEE_HISTORY_DAYS: 30,
     RECONCILE_MIN_AGE_MS: 60 * 1000,
     RECONCILE_BATCH_SIZE: 50,
-    NARRATION: "Doviz withdrawal",
+    NARRATION: `${BRAND.NAME} withdrawal`,
 } as const;
 
 /** The service names in provider_settings. */

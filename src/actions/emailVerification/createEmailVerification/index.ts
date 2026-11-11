@@ -9,6 +9,7 @@ import sendEmail from "@/services/email/sendEmail";
 import updateLiveEmailVerifications from "./queries/updateLiveEmailVerifications";
 import insertEmailVerification from "./queries/insertEmailVerification";
 import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
+import BRAND from "@/constants/brand";
 
 interface ICreateEmailVerification {
     userId: string;
@@ -30,8 +31,8 @@ const createEmailVerification = async ({
     // sending fails nothing is written and the previous code stays valid.
     await sendEmail({
         to: email,
-        subject: "Verify your Doviz email",
-        text: `Your Doviz email verification code is ${otp}. It expires in ${AUTH.EMAIL_OTP_TTL_SECONDS / 60} minutes. If you didn't request this, you can ignore this email. Never share this code with anyone, including Doviz staff.`,
+        subject: `Verify your ${BRAND.NAME} email`,
+        text: `Your ${BRAND.NAME} email verification code is ${otp}. It expires in ${AUTH.EMAIL_OTP_TTL_SECONDS / 60} minutes. If you didn't request this, you can ignore this email. Never share this code with anyone, including ${BRAND.NAME} staff.`,
     });
 
     const data = await withTransaction(async (trx) => {

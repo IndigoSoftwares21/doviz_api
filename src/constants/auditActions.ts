@@ -6,6 +6,7 @@ const AUDIT_ACTIONS = {
     LOGIN_FAILED: "auth.login.failed",
     USER_REGISTERED: "user.registered",
     USER_NAME_UPDATED: "user.name.updated",
+    USER_TAG_SET: "user.tag.set",
     SESSION_UNLOCKED: "auth.session.unlocked",
     SESSION_UNLOCK_FAILED: "auth.session.unlock_failed",
     SESSION_REVOKED: "auth.session.revoked",

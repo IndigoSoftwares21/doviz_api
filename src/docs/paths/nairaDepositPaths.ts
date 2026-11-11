@@ -51,7 +51,7 @@ const nairaDeposit = {
         bankAccount: {
             type: ["object", "null"],
             description: "Only while `pending`.",
-            properties: { accountName: { type: "string", example: "Doviz Checkout" }, accountNumber: { type: "string", example: "9876543210" }, bankName: { type: "string", example: "Wema Bank" } },
+            properties: { accountName: { type: "string", example: "Ziks Checkout" }, accountNumber: { type: "string", example: "9876543210" }, bankName: { type: "string", example: "Wema Bank" } },
         },
         expiresAt: { type: "string", format: "date-time" },
         expiresInSeconds: { type: "integer", example: 1742, description: "Seconds left to pay, by the server's clock (0 unless `pending`). Drive the countdown from this, not the phone's clock." },
@@ -60,7 +60,7 @@ const nairaDeposit = {
         completedAt: { type: ["string", "null"], format: "date-time" },
         sender: {
             type: ["object", "null"],
-            description: "Who sent the money — the external account it came from (never Doviz's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
+            description: "Who sent the money — the external account it came from (never Ziks's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
             properties: {
                 name: { type: ["string", "null"], example: "ADA OKAFOR" },
                 bankName: { type: ["string", "null"], example: "First Bank" },
@@ -117,7 +117,7 @@ const nairaDepositPaths = {
     "/naira-deposits/{nairaDepositId}": {
         get: {
             tags: ["Naira deposits"], summary: "A naira deposit", operationId: "getNairaDeposit", security: auth,
-            description: "The deposit as Doviz has it. Fetch it when a `naira_deposit.updated` socket event names it (and when the socket reconnects). Doesn't call the provider.",
+            description: "The deposit as Ziks has it. Fetch it when a `naira_deposit.updated` socket event names it (and when the socket reconnects). Doesn't call the provider.",
             parameters: [{ name: "nairaDepositId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
             responses: {
                 "200": { description: "The deposit.", content: jsonContent({ schema: dataEnvelope({ message: "Deposit fetched", code: 200, data: nairaDeposit }) }) },

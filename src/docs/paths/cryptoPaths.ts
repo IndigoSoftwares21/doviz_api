@@ -42,7 +42,7 @@ const cryptoPaths = {
     "/crypto/quote": {
         get: {
             tags: ["Crypto deposits"], summary: "Estimate naira for a deposit", operationId: "getCryptoQuote", security: auth,
-            description: "Provider conversion (after its fee) minus Doviz's markup for the coin. An estimate, cached briefly; the final amount uses the rate at completion. 503 when no markup is configured for the coin.",
+            description: "Provider conversion (after its fee) minus Ziks's markup for the coin. An estimate, cached briefly; the final amount uses the rate at completion. 503 when no markup is configured for the coin.",
             parameters: [
                 { name: "assetId", in: "query", required: true, schema: { type: "string", format: "uuid" } },
                 { name: "cryptoAmount", in: "query", required: true, schema: { type: "string", example: "100" } },

@@ -3,6 +3,7 @@ import successEnvelope from "@/docs/utils/successEnvelope";
 import cryptoTags from "@/docs/paths/cryptoTags";
 import cryptoPaths from "@/docs/paths/cryptoPaths";
 import cryptoBuyPaths from "@/docs/paths/cryptoBuy";
+import ziktagPaths from "@/docs/paths/user/ziktagPaths";
 import walletPaths from "@/docs/paths/wallet";
 import bankPaths from "@/docs/paths/bankPaths";
 import billPaths, { billTags } from "@/docs/paths/billPaths";
@@ -21,9 +22,9 @@ const validationExample = (path: string, message: string) => ({
 const openApiSpec = {
     openapi: "3.1.0",
     info: {
-        title: "Doviz API",
+        title: "Ziks API",
         version: "1.0.0",
-        description: `Internal API reference for the Doviz app.
+        description: `Internal API reference for the Ziks app.
 
 ## Base URL
 All endpoints below are relative to \`/api/v1/app\`.
@@ -269,6 +270,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
                     firstName: { type: ["string", "null"], example: "Adéṣọlá" },
                     middleName: { type: ["string", "null"], example: null },
                     lastName: { type: ["string", "null"], example: "Okafor-Eze" },
+                    tag: { type: ["string", "null"], example: "ada_o", description: "The Ziktag (@handle), lowercase, without \"@\". null until chosen." },
                     email: { type: ["string", "null"], format: "email" },
                     emailVerifiedAt: { type: ["string", "null"], format: "date-time" },
                     accountStatus: { type: "string", enum: ["active", "suspended", "closed"] },
@@ -407,6 +409,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
     paths: {
         ...cryptoPaths,
         ...cryptoBuyPaths,
+        ...ziktagPaths,
         ...walletPaths,
         ...bankPaths,
         ...billPaths,

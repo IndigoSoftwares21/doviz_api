@@ -9,6 +9,7 @@ const selectUserOverview = async ({ userId, deviceId }: { userId: string; device
             "users.firstName",
             "users.middleName",
             "users.lastName",
+            "users.tag",
             "users.email",
             "users.emailVerifiedAt",
             "users.status",

@@ -51,7 +51,7 @@ export const statementDetail = {
                 id: { type: "string", format: "uuid", description: "The naira deposit." },
                 sender: {
                     type: ["object", "null"],
-                    description: "Who sent the money — the external account it came from (never Doviz's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
+                    description: "Who sent the money — the external account it came from (never Ziks's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
                     properties: {
                         name: { type: ["string", "null"], example: "ADA OKAFOR" },
                         bankName: { type: ["string", "null"], example: "First Bank" },

@@ -2,7 +2,7 @@ const cryptoTags = [
     {
         name: "Crypto deposits",
         description:
-            "Deposit addresses and conversion quotes. Crypto sent to an address is converted to naira and credited to the user's naira balance, minus Doviz's markup for that coin. Quotes are estimates; the final amount uses the rate when the deposit completes.",
+            "Deposit addresses and conversion quotes. Crypto sent to an address is converted to naira and credited to the user's naira balance, minus Ziks's markup for that coin. Quotes are estimates; the final amount uses the rate when the deposit completes.",
     },
     {
         name: "Buy crypto",

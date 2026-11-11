@@ -7,7 +7,7 @@ const renderDocsLoginPage = ({ nonce, error }: { nonce: string; error?: string }
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Doviz API Reference</title>
+    <title>Ziks API Reference</title>
     <style nonce="${escapeHtml({ value: nonce })}">
         :root {
             --bg: #f6f6f4;
@@ -97,7 +97,7 @@ const renderDocsLoginPage = ({ nonce, error }: { nonce: string; error?: string }
 <body>
     <main>
         <div class="card">
-            <div class="brand"><div class="mark" aria-hidden="true">D</div><span>Doviz</span></div>
+            <div class="brand"><div class="mark" aria-hidden="true">Z</div><span>Ziks</span></div>
             <h1>API reference</h1>
             <p class="subtitle">Enter the docs password to continue.</p>
             ${error ? `<div class="error" role="alert">${escapeHtml({ value: error })}</div>` : ""}

@@ -50,7 +50,7 @@ const renderDocsPage = ({ nonce }: { nonce: string }) => {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta property="csp-nonce" content="${nonceAttr}" />
-    <title>Doviz API Reference</title>
+    <title>Ziks API Reference</title>
 </head>
 <body>
     <div id="app"></div>

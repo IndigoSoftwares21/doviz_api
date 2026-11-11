@@ -49,7 +49,7 @@ const createWithdrawalSettlement = async ({ trx, withdrawalId, record }: { trx: 
     }
     const absorbed = extra.minus(taken);
     if (absorbed.greaterThan(0)) {
-        monitoring.error(`Withdrawal ${withdrawal.id}: fee ₦${fee.toFixed(2)} above reserve and balance — Doviz absorbs ₦${absorbed.toFixed(2)}`, new Error("withdrawal fee shortfall"));
+        monitoring.error(`Withdrawal ${withdrawal.id}: fee ₦${fee.toFixed(2)} above reserve and balance — we absorb ₦${absorbed.toFixed(2)}`, new Error("withdrawal fee shortfall"));
     }
 
     const userEntry = release.minus(taken);

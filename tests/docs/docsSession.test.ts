@@ -29,7 +29,7 @@ describe("API docs session", () => {
             .set("Cookie", sessionCookie());
 
         expect(response.status).toBe(200);
-        expect(response.body.info.title).toBe("Doviz API");
+        expect(response.body.info.title).toBe("Ziks API");
     });
 
     it.each([

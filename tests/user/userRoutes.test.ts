@@ -21,6 +21,7 @@ const overview = (overrides = {}) => ({
     firstName: null,
     middleName: null,
     lastName: null,
+    tag: null,
     email: null,
     emailVerifiedAt: null,
     status: "active",
@@ -52,6 +53,12 @@ describe("GET /user", () => {
         expect(response.status).toBe(200);
         expect(selectUserOverview).toHaveBeenCalledWith({ userId: "user-1", deviceId: "device-abc-123" });
         expect(response.headers["cache-control"]).toBe("no-store");
+    });
+
+    it("returns the Ziktag (null until chosen)", async () => {
+        jest.mocked(selectUserOverview).mockResolvedValue(overview({ tag: "ada_o" }));
+        const response = await request(app.express).get("/api/v1/app/user").set("Authorization", auth());
+        expect(response.body.data.tag).toBe("ada_o");
     });
 
     it("never exposes secrets", async () => {
