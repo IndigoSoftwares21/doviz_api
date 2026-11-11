@@ -1,13 +1,28 @@
 import { sql } from "kysely";
 import { db } from "@/database";
-import { LEDGER_ACCOUNT_KIND } from "@/constants/ledger";
+import { ENTRY_DIRECTION, LEDGER_ACCOUNT_KIND, STATEMENT_TYPE_LEDGER_TYPES } from "@/constants/ledger";
+import { StatementFilters } from "@/types/statementFilters";
 
 /**
  * The user's naira statement: their ledger entries (each with the balance
  * after it), joined to what caused them. Keyset-paged on (created_at, id)
  * compared INSIDE Postgres, so microsecond timestamps never lose precision.
+ *
+ * Filters only add WHERE clauses, so paging works the same within them.
+ * Direction comes from the entry's own sign (the rule toStatementItem uses),
+ * so "money in" always matches the "+" rows. `from` inclusive, `to` exclusive.
  */
-const selectStatementEntries = async ({ userId, afterEntryId, limit }: { userId: string; afterEntryId: string | null; limit: number }) => {
+const selectStatementEntries = async ({
+    userId,
+    afterEntryId,
+    limit,
+    filters,
+}: {
+    userId: string;
+    afterEntryId: string | null;
+    limit: number;
+    filters: StatementFilters;
+}) => {
     let query = db
         .selectFrom("ledger_entries")
         .innerJoin("ledger_accounts", "ledger_accounts.id", "ledger_entries.accountId")
@@ -30,6 +45,12 @@ const selectStatementEntries = async ({ userId, afterEntryId, limit }: { userId:
         ])
         .where("ledger_accounts.kind", "=", LEDGER_ACCOUNT_KIND.USER_AVAILABLE)
         .where("ledger_accounts.userId", "=", userId);
+
+    if (filters.direction === ENTRY_DIRECTION.CREDIT) query = query.where("ledger_entries.amount", ">", "0");
+    if (filters.direction === ENTRY_DIRECTION.DEBIT) query = query.where("ledger_entries.amount", "<", "0");
+    if (filters.type) query = query.where("ledger_transactions.type", "in", STATEMENT_TYPE_LEDGER_TYPES[filters.type]);
+    if (filters.from) query = query.where("ledger_entries.createdAt", ">=", filters.from);
+    if (filters.to) query = query.where("ledger_entries.createdAt", "<", filters.to);
 
     if (afterEntryId) {
         query = query.where(

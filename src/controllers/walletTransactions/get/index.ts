@@ -6,12 +6,22 @@ import getWalletTransactionsSchema from "./schema/getWalletTransactionsSchema";
 
 const getWalletTransactions = async (req: Request, res: Response) => {
     try {
-        const { cursor, size } = req.query;
+        const { cursor, size, direction, type, from, to } = req.query;
         const { id: userId } = req.user!;
 
-        const validated = await getWalletTransactionsSchema.parseAsync({ cursor, size });
+        const validated = await getWalletTransactionsSchema.parseAsync({ cursor, size, direction, type, from, to });
 
-        const { data } = await fetchWalletTransactions({ userId, afterEntryId: validated.cursor, size: validated.size });
+        const { data } = await fetchWalletTransactions({
+            userId,
+            afterEntryId: validated.cursor,
+            size: validated.size,
+            filters: {
+                direction: validated.direction ?? null,
+                type: validated.type ?? null,
+                from: validated.from ?? null,
+                to: validated.to ?? null,
+            },
+        });
 
         res.set("Cache-Control", "no-store");
 
