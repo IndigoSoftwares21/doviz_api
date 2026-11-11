@@ -9,6 +9,8 @@ import createNairaDeposit from "@/actions/nairaDeposit/createNairaDeposit";
 import syncNairaDeposit from "@/actions/nairaDeposit/syncNairaDeposit";
 import fetchOpenNairaDeposits from "@/actions/nairaDeposits/fetchOpenNairaDeposits";
 import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
+import fetchNairaDeposit from "@/actions/nairaDeposit/fetchNairaDeposit";
+import createNairaDepositCancellation from "@/actions/nairaDepositCancellation/createNairaDepositCancellation";
 import collectionProviderRegistry from "@/services/collections/collectionProviderRegistry";
 import CollectionProviderError from "@/services/collections/collectionProviderError";
 import { LEDGER_ACCOUNT_KIND } from "@/constants/ledger";
@@ -141,6 +143,48 @@ run("naira deposits against Postgres", () => {
         const other = await start({ amount: "8888.00" });
         expect(other.isNew).toBe(true);
         expect(createPrimary).toHaveBeenCalledTimes(2);
+    });
+
+    it("a new amount replaces the older unpaid top-up — which is still credited if it gets paid", async () => {
+        const before = Number(await userBalance());
+        const old = await start({ amount: "6000.00" });
+        const fresh = await start({ amount: "6500.00" });
+
+        expect(await deposit(old.data!.id)).toMatchObject({ status: "expired" });
+        expect(await deposit(fresh.data!.id)).toMatchObject({ status: "pending" });
+        expect((await fetchActiveNairaDeposit({ userId })).data?.id).toBe(fresh.data!.id);
+
+        getPrimary.mockResolvedValue(bankTransferRecord({ externalId: old.data!.id }));
+        await expect(syncNairaDeposit({ nairaDepositId: old.data!.id })).resolves.toEqual({ data: { outcome: "credited" } });
+        expect(Number(await userBalance())).toBe(before + 50000);
+    });
+
+    it("cancelling stops offering the account, still credits money that arrives anyway, and never touches someone else's", async () => {
+        const before = Number(await userBalance());
+        const { data } = await start();
+        const stranger = await db.insertInto("users").values({ phoneNumber: `+23482${Date.now().toString().slice(-8)}`, status: "active" } as never).returning(["id"]).executeTakeFirstOrThrow();
+
+        await expect(createNairaDepositCancellation({ userId: stranger.id, nairaDepositId: data!.id })).resolves.toEqual({ data: null });
+        expect(await deposit(data!.id)).toMatchObject({ status: "pending" });
+
+        const { data: cancelled } = await createNairaDepositCancellation({ userId, nairaDepositId: data!.id });
+        expect(cancelled).toMatchObject({ id: data!.id, status: "expired" });
+        expect((await fetchActiveNairaDeposit({ userId })).data).toBeNull();
+
+        getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id }));
+        await expect(syncNairaDeposit({ nairaDepositId: data!.id })).resolves.toEqual({ data: { outcome: "credited" } });
+        expect(Number(await userBalance())).toBe(before + 50000);
+        await expect(createNairaDepositCancellation({ userId, nairaDepositId: data!.id })).resolves.toMatchObject({ data: { status: "completed" } });
+    });
+
+    it("records who sent the money (masked) and shows it on the deposit", async () => {
+        const { data } = await start();
+        const sender = { name: "ADA OKAFOR", bankName: "First Bank", bankCode: "011", accountNumber: "******1001" };
+        getPrimary.mockResolvedValue(bankTransferRecord({ externalId: data!.id, sender }));
+        await syncNairaDeposit({ nairaDepositId: data!.id });
+
+        const { data: fetched } = await fetchNairaDeposit({ userId, nairaDepositId: data!.id });
+        expect(fetched?.sender).toEqual({ name: "ADA OKAFOR", bankName: "First Bank", accountNumber: "******1001" });
     });
 
     it("returns the original deposit for a repeated idempotency key", async () => {

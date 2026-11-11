@@ -4,7 +4,8 @@ import * as dotenv from "dotenv";
 import * as monitoring from "@/utils/monitoring";
 import { Database } from "./types";
 
-dotenv.config();
+// Only the chosen env file: `npm run dev:prod` sets DOTENV_CONFIG_PATH=.env.production, so .env is never read.
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" });
 
 // Database connection details
 export const connectionDetails = {

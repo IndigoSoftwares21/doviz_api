@@ -1,7 +1,6 @@
 import { ProviderAsset } from "../../types";
 import { BreetAsset } from "./breetTypes";
 import mapBreetNetwork from "./mapBreetNetwork";
-import toDecimalString from "./toDecimalString";
 
 const mapBreetAsset = ({ asset }: { asset: BreetAsset }): ProviderAsset => {
     const symbol = asset.symbol.toUpperCase();
@@ -12,7 +11,8 @@ const mapBreetAsset = ({ asset }: { asset: BreetAsset }): ProviderAsset => {
         symbol,
         network: mapBreetNetwork({ network: asset.network, type: asset.type }),
         name: asset.name,
-        minDeposit: toDecimalString({ value: asset.minimum }),
+        // Breet's `minimum` is USD, not coin units — the coin minimum comes live from getMinDeposit.
+        minDeposit: null,
         confirmations: typeof asset.confirmations === "number" ? asset.confirmations : null,
     };
 };

@@ -9,6 +9,7 @@
     "test": "jest",
     "fresh": "docker-compose down -v && docker-compose up --build -d --wait && echo '🚀 Docker containers are running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
     "dev": "docker-compose up -d --wait && echo '🚀 Docker is running in the background!' && ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/app.ts",
+    "dev:prod": "docker-compose --env-file .env.production up -d --wait && echo '🚀 Running with .env.production' && DOTENV_CONFIG_PATH=.env.production ts-node-dev --respawn --transpile-only --require dotenv/config --require tsconfig-paths/register src/app.ts",
     "docker:logs": "docker-compose logs -f --tail=50",
     "lint": "eslint \"src/**/*.ts\"",
     "prepare": "husky install || true",
@@ -28,11 +29,14 @@
     "bills:review": "ts-node -r tsconfig-paths/register scripts/review-bill-billers.ts",
     "payouts:sync-banks": "ts-node -r tsconfig-paths/register scripts/sync-payout-banks.ts",
     "payouts:use": "ts-node -r tsconfig-paths/register scripts/use-payout-provider.ts",
+    "payouts:set-fee": "ts-node -r tsconfig-paths/register scripts/set-payout-fee.ts",
     "crypto-sends:sync": "ts-node -r tsconfig-paths/register scripts/sync-crypto-sends.ts",
     "crypto-sends:use": "ts-node -r tsconfig-paths/register scripts/use-crypto-send-provider.ts",
     "crypto:set-rate": "ts-node -r tsconfig-paths/register scripts/set-crypto-buy-rate.ts",
     "crypto:record-topup": "ts-node -r tsconfig-paths/register scripts/record-crypto-topup.ts",
-    "crypto-purchases:resolve": "ts-node -r tsconfig-paths/register scripts/resolve-crypto-purchase.ts"
+    "crypto-purchases:resolve": "ts-node -r tsconfig-paths/register scripts/resolve-crypto-purchase.ts",
+    "sync": "npm run crypto:sync && npm run payouts:sync-banks && npm run bills:sync && npm run crypto-sends:sync",
+    "sync:prod": "DOTENV_CONFIG_PATH=.env.production npm run sync"
   },
   "keywords": [
     "express",

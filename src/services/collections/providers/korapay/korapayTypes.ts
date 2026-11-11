@@ -19,6 +19,14 @@ export interface KorapayBankTransferCharge {
     };
 }
 
+/** The account a bank transfer came FROM (Korapay sends it on paid charges). */
+export interface KorapayPayerBankAccount {
+    account_name?: string | null;
+    account_number?: string | null;
+    bank_name?: string | null;
+    bank_code?: string | null;
+}
+
 export interface KorapayCharge {
     reference?: string;
     payment_reference?: string;
@@ -29,4 +37,6 @@ export interface KorapayCharge {
     vat?: KorapayAmount;
     currency?: string;
     transaction_date?: string;
+    payer_bank_account?: KorapayPayerBankAccount | null;
+    bank_transfer?: { payer_bank_account?: KorapayPayerBankAccount | null } | null;
 }

@@ -1,6 +1,6 @@
 // scripts/sync-bill-catalog.ts — npm run bills:sync [-- <provider>]
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { disconnect } from "../src/database";
 import billProviderRegistry from "../src/services/bills/billProviderRegistry";

@@ -28,7 +28,7 @@ describe("Breet mappers", () => {
     ])("maps %p to network %s", (fields, network) => {
         const asset = mapBreetAsset({ asset: { id: "x", name: "n", identifier: "ID", minimum: 5, confirmations: 3, ...fields } });
         expect(asset.network).toBe(network);
-        expect(asset.minDeposit).toBe("5");
+        expect(asset.minDeposit).toBeNull(); // Breet's `minimum` is USD — coin minimums come from getMinDeposit
     });
 
     it("maps a bank to a neutral slug and no fake CBN code", () => {

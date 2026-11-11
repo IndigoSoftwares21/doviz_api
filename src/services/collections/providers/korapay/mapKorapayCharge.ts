@@ -4,6 +4,7 @@ import { ProviderBankTransfer } from "../../types";
 import KORAPAY from "./constants";
 import { KorapayCharge } from "./korapayTypes";
 import mapKorapayChargeStatus from "./mapKorapayChargeStatus";
+import mapKorapayPayer from "./mapKorapayPayer";
 import sumKorapayFee from "./sumKorapayFee";
 import toKorapayMoney from "./toKorapayMoney";
 
@@ -28,6 +29,7 @@ const mapKorapayCharge = ({ externalId, charge }: { externalId: string; charge: 
         amountPaid: paid ? { amount: paid, currency } : null,
         fee: fee ? { amount: fee, currency } : null,
         paidAt: paidAt && !Number.isNaN(paidAt.getTime()) ? paidAt : null,
+        sender: mapKorapayPayer({ charge }),
     };
 };
 

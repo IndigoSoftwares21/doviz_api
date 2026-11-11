@@ -9,7 +9,7 @@
 //
 // <id> is the first 8 characters shown in the list. Only CONFIRMED links reach the app.
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { sql } from "kysely";
 import { db, disconnect } from "../src/database";

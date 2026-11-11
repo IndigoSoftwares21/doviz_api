@@ -2,7 +2,8 @@
 import type { Knex } from "knex";
 import * as dotenv from "dotenv";
 
-dotenv.config();
+// Only the chosen env file: `npm run dev:prod` sets DOTENV_CONFIG_PATH=.env.production, so .env is never read.
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" });
 
 const config: { [key: string]: Knex.Config } = {
     development: {

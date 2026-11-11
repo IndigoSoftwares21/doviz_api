@@ -1,6 +1,6 @@
 // scripts/mock-crypto-deposit.ts — npm run crypto:mock-deposit -- <address> <amountInUSD> [cryptoAmount]
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { randomUUID } from "crypto";
 import { db, disconnect } from "../src/database";

@@ -143,7 +143,28 @@ describe("KorapayCollectionProvider.getBankTransfer", () => {
             amountPaid: NGN("50375.00"),
             fee: NGN("375.00"),
             paidAt: new Date("2026-11-10T12:10:00.000Z"),
+            sender: null,
         });
+    });
+
+    it("reads who sent it, masking their account number to the last 4 digits", async () => {
+        const payer = { account_name: " ADA OKAFOR ", account_number: "3110921001", bank_name: "First Bank", bank_code: "011" };
+        const http = new FakeKorapayHttp().reply(
+            `GET /charges/${DEPOSIT_ID}`,
+            ok({ reference: DEPOSIT_ID, status: "success", amount: 50000, amount_paid: 50375, currency: "NGN", payer_bank_account: payer, bank_transfer: { payer_bank_account: payer } }),
+        );
+        await expect(get(http)).resolves.toMatchObject({ sender: { name: "ADA OKAFOR", bankName: "First Bank", bankCode: "011", accountNumber: "******1001" } });
+    });
+
+    it("finds the payer under bank_transfer too, and treats an empty one as unknown", async () => {
+        const nested = new FakeKorapayHttp().reply(
+            `GET /charges/${DEPOSIT_ID}`,
+            ok({ reference: DEPOSIT_ID, status: "success", amount: 50000, bank_transfer: { payer_bank_account: { account_name: "Obi", account_number: "******7788" } } }),
+        );
+        await expect(get(nested)).resolves.toMatchObject({ sender: { name: "Obi", accountNumber: "******7788", bankName: null } });
+
+        const empty = new FakeKorapayHttp().reply(`GET /charges/${DEPOSIT_ID}`, ok({ reference: DEPOSIT_ID, status: "success", amount: 50000, payer_bank_account: { account_name: "" } }));
+        await expect(get(empty)).resolves.toMatchObject({ sender: null });
     });
 
     it.each([

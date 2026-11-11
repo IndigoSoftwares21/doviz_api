@@ -2,16 +2,16 @@ import Decimal from "decimal.js";
 import fetchActivePayoutProvider from "@/actions/payoutProvider/fetchActivePayoutProvider";
 import selectQuoteBankAccount from "./queries/selectQuoteBankAccount";
 import selectProviderBankId from "./queries/selectProviderBankId";
-import selectHighestRecentFee from "./queries/selectHighestRecentFee";
+import estimatePayoutFee from "./utils/estimatePayoutFee";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import WITHDRAWALS from "@/constants/withdrawals";
 
 /**
  * What a withdrawal will cost, with the provider active RIGHT NOW. The fee is
  * dynamic and paid by the user: exact when the provider can quote it, else a
- * reserve — the highest real fee this provider charged us recently (our own
- * records; nothing configured). The real fee is charged at settlement and any
- * unused reserve goes straight back. The app shows this before the PIN, and
+ * reserve — the higher of the provider's configured default fee
+ * (payout_fee_defaults) and the highest real fee it charged us recently. The
+ * real fee is charged at settlement and any unused reserve goes straight back. The app shows this before the PIN, and
  * the server recomputes it on confirm (a change → the user re-confirms).
  */
 const fetchWithdrawalQuote = async ({ userId, bankAccountId, amount }: { userId: string; bankAccountId: string; amount: string }) => {
@@ -27,12 +27,7 @@ const fetchWithdrawalQuote = async ({ userId, bankAccountId, amount }: { userId:
         return { data: null, failure: ACTION_FAILURE.AMOUNT_OUT_OF_RANGE, limits };
     }
     const quoted = provider.quoteFee ? await provider.quoteFee({ amount: money }) : null;
-    let fee = quoted?.amount ?? null;
-    if (fee === null) {
-        const since = new Date(Date.now() - WITHDRAWALS.FEE_HISTORY_DAYS * 24 * 60 * 60 * 1000);
-        const history = await selectHighestRecentFee({ provider: provider.name, environment: provider.environment, since });
-        fee = history?.highestFee ? new Decimal(history.highestFee).toFixed(2) : "0.00";
-    }
+    const fee = quoted?.amount ?? (await estimatePayoutFee({ provider: provider.name, environment: provider.environment, currency: money.currency }));
 
     const data = {
         provider,

@@ -93,7 +93,8 @@ class App {
         port: number,
         maxPortAttempts = 10,
     ): Promise<void> {
-        dotenv.config();
+        // Only the chosen env file: `npm run dev:prod` sets DOTENV_CONFIG_PATH=.env.production, so .env is never read.
+        dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" });
 
         let currentPort = port;
 

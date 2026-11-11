@@ -51,6 +51,12 @@ query and the webhook.
   The user never pays more than the real fee; every kobo is in the ledger.
 - A provider that **can** quote (e.g. Flutterwave) quotes exactly instead.
 
+- **Default fee per provider (2026-11-11):** `payout_fee_defaults`
+  (provider, environment) holds a fixed fee plus VAT %. Korapay: ₦50 + 7.5% =
+  ₦53.75 live, ₦30 + 7.5% = ₦32.25 sandbox. When the provider can't quote a fee,
+  the reserve is the **higher** of this default and the highest real fee in the
+  last 30 days. Change it with `npm run payouts:set-fee -- korapay 50 --vat 7.5 --env production`.
+
 ## 5. Flow — `POST /wallet/withdrawals`
 `{ bankAccountId, amount, idempotencyKey, pin }`
 1. PIN · own, active, name-matched bank account · limits (₦100–₦5,000,000)

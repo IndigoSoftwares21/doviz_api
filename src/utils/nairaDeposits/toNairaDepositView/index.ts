@@ -14,6 +14,9 @@ export interface NairaDepositRow {
     failureReason: string | null;
     createdAt: Date;
     finalizedAt: Date | null;
+    senderName: string | null;
+    senderBankName: string | null;
+    senderAccountNumber: string | null;
 }
 
 /**
@@ -40,6 +43,10 @@ const toNairaDepositView = ({ row }: { row: NairaDepositRow }) => ({
     failureReason: row.failureReason,
     createdAt: row.createdAt,
     completedAt: row.finalizedAt,
+    /** Who sent the money (the external account, masked), once the provider reports it. */
+    sender: row.senderName || row.senderBankName || row.senderAccountNumber
+        ? { name: row.senderName, bankName: row.senderBankName, accountNumber: row.senderAccountNumber }
+        : null,
 });
 
 export default toNairaDepositView;

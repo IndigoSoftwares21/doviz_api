@@ -7,6 +7,7 @@ import createNairaDeposit from "@/actions/nairaDeposit/createNairaDeposit";
 import fetchNairaDeposit from "@/actions/nairaDeposit/fetchNairaDeposit";
 import fetchNairaDeposits from "@/actions/nairaDeposits/fetchNairaDeposits";
 import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
+import createNairaDepositCancellation from "@/actions/nairaDepositCancellation/createNairaDepositCancellation";
 import ACTION_FAILURE from "@/constants/actionFailure";
 
 jest.mock("@/database", () => ({ db: {}, withTransaction: jest.fn() }));
@@ -15,6 +16,7 @@ jest.mock("@/actions/nairaDeposit/createNairaDeposit");
 jest.mock("@/actions/nairaDeposit/fetchNairaDeposit");
 jest.mock("@/actions/nairaDeposits/fetchNairaDeposits");
 jest.mock("@/actions/nairaDeposit/fetchActiveNairaDeposit");
+jest.mock("@/actions/nairaDepositCancellation/createNairaDepositCancellation");
 
 process.env.JWT_ACCESS_SECRET = "test-jwt-secret-test-jwt-secret-test-0001";
 
@@ -103,5 +105,18 @@ describe("naira deposit routes", () => {
         const response = await request(app).get("/api/v1/app/naira-deposits?limit=5&offset=10").set("Authorization", auth());
         expect(response.status).toBe(200);
         expect(fetchNairaDeposits).toHaveBeenCalledWith({ userId: "user-1", limit: 5, offset: 10 });
+    });
+
+    it("cancels the user's own top-up, 404 for someone else's, 400 for a bad id", async () => {
+        const cancel = (id: string) => request(app).post(`/api/v1/app/naira-deposits/${id}/cancel`).set("Authorization", auth());
+        jest.mocked(createNairaDepositCancellation).mockResolvedValue({ data: { ...view, status: "expired" } } as never);
+        const response = await cancel(DEPOSIT_ID);
+        expect(response.status).toBe(200);
+        expect(response.body.data.status).toBe("expired");
+        expect(createNairaDepositCancellation).toHaveBeenCalledWith({ userId: "user-1", nairaDepositId: DEPOSIT_ID });
+
+        jest.mocked(createNairaDepositCancellation).mockResolvedValue({ data: null });
+        expect((await cancel(DEPOSIT_ID)).status).toBe(404);
+        expect((await cancel("not-a-uuid")).status).toBe(400);
     });
 });

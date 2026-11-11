@@ -31,7 +31,7 @@ const statementLine = (deposit: Record<string, unknown>) => ({
 
 export const statementItem = statementLine(depositSummary);
 
-export const statementDetail = statementLine({
+const detailLine = statementLine({
     ...depositSummary,
     rateNgnPerUsd: { type: ["string", "null"], example: "1575.60" },
     txHash: { type: ["string", "null"] },
@@ -39,6 +39,29 @@ export const statementDetail = statementLine({
     detectedAt: { type: ["string", "null"], format: "date-time" },
     completedAt: { type: ["string", "null"], format: "date-time" },
 });
+
+export const statementDetail = {
+    ...detailLine,
+    properties: {
+        ...detailLine.properties,
+        bankTransfer: {
+            type: ["object", "null"],
+            description: "Set for naira top-ups by bank transfer.",
+            properties: {
+                id: { type: "string", format: "uuid", description: "The naira deposit." },
+                sender: {
+                    type: ["object", "null"],
+                    description: "Who sent the money — the external account it came from (never Doviz's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
+                    properties: {
+                        name: { type: ["string", "null"], example: "ADA OKAFOR" },
+                        bankName: { type: ["string", "null"], example: "First Bank" },
+                        accountNumber: { type: ["string", "null"], example: "******1001" },
+                    },
+                },
+            },
+        },
+    },
+};
 
 export const incomingDeposit = {
     type: "object",

@@ -1,7 +1,7 @@
 // scripts/sync-crypto-sends.ts — npm run crypto-sends:sync [-- <provider>] [--enable]
 // Maps a crypto-send provider's coins/networks onto ours (default: the active provider).
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { db, disconnect } from "../src/database";
 import cryptoSendProviderRegistry from "../src/services/cryptoSends/cryptoSendProviderRegistry";

@@ -1,8 +1,10 @@
 import { CryptoProvider, WebhookRequest } from "../../cryptoProvider";
 import BreetClient from "./breetClient";
-import { BreetAsset, BreetBank, BreetIntegration, BreetRateQuote, BreetTransaction } from "./breetTypes";
+import { BreetAsset, BreetBank, BreetIntegration, BreetTransaction } from "./breetTypes";
 import BREET from "./constants";
+import BreetMinDeposits from "./breetMinDeposits";
 import calculateBreetQuote from "./calculateBreetQuote";
+import fetchBreetUsdRate from "./fetchBreetUsdRate";
 import createBreetDepositAddress from "./createBreetDepositAddress";
 import findBreetWalletByLabel from "./findBreetWalletByLabel";
 import listBreetTransactionsSince from "./listBreetTransactionsSince";
@@ -23,12 +25,14 @@ class BreetProvider implements CryptoProvider {
     private readonly client: BreetClient;
     private readonly assets: TtlCache<BreetAsset[]>;
     private readonly integration: TtlCache<BreetIntegration>;
+    private readonly minDeposits: BreetMinDeposits;
 
     constructor({ client, now = Date.now }: { client?: BreetClient; now?: () => number } = {}) {
         this.client = client ?? new BreetClient();
         this.environment = this.client.environment;
         this.assets = new TtlCache({ ttlMs: BREET.CACHE_TTL_MS, now });
         this.integration = new TtlCache({ ttlMs: BREET.CACHE_TTL_MS, now });
+        this.minDeposits = new BreetMinDeposits(this.client, this.rawAssets, BREET.MIN_DEPOSIT_CACHE_TTL_MS, now);
     }
 
     private rawAssets = () => this.assets.get(() => this.client.request<BreetAsset[]>({ method: "GET", path: "/trades/assets" }));
@@ -77,23 +81,19 @@ class BreetProvider implements CryptoProvider {
     }
 
     async getQuote({ providerAssetId, cryptoAmount }: { providerAssetId: string; cryptoAmount: string }) {
-        const path = `/trades/pbc/sell/rate-calculator/${encodeURIComponent(providerAssetId)}`;
-        const quote = await this.client.request<BreetRateQuote>({ method: "POST", path, body: { amountInUSD: 1, currency: "ngn" } });
+        const quote = await fetchBreetUsdRate({ client: this.client, providerAssetId });
         const integration = await this.integration.get(() => this.client.request<BreetIntegration>({ method: "GET", path: "/users/fetch-integration" }));
         return calculateBreetQuote({ quote, cryptoAmount, platformFee: integration.platformFeePercent });
     }
 
-    verifyWebhook(request: WebhookRequest) {
-        return verifyBreetWebhook({ request });
-    }
+    /** Breet's minimum is in USD; converted to coin units (see BreetMinDeposits). */
+    getMinDeposit = ({ providerAssetId }: { providerAssetId: string }) => this.minDeposits.get(providerAssetId);
 
-    parseWebhook(body: unknown) {
-        return parseBreetWebhook({ body });
-    }
+    verifyWebhook = (request: WebhookRequest) => verifyBreetWebhook({ request });
 
-    isWebhookPing(body: unknown) {
-        return (body as { event?: unknown } | null)?.event === BREET.VERIFICATION_EVENT;
-    }
+    parseWebhook = (body: unknown) => parseBreetWebhook({ body });
+
+    isWebhookPing = (body: unknown) => (body as { event?: unknown } | null)?.event === BREET.VERIFICATION_EVENT;
 }
 
 export default BreetProvider;

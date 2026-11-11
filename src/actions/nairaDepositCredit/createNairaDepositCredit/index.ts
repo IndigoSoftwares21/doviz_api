@@ -69,6 +69,7 @@ const createNairaDepositCredit = async ({ trx, nairaDepositId, record }: { trx: 
         amountCredited,
         paidAt: record.paidAt ?? new Date(),
         ledgerTransactionId: posting.transactionId,
+        sender: record.sender,
     });
 
     await createAuditLog({

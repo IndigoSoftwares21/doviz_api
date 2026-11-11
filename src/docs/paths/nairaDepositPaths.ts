@@ -58,6 +58,15 @@ const nairaDeposit = {
         failureReason: { type: ["string", "null"] },
         createdAt: { type: "string", format: "date-time" },
         completedAt: { type: ["string", "null"], format: "date-time" },
+        sender: {
+            type: ["object", "null"],
+            description: "Who sent the money — the external account it came from (never Doviz's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",
+            properties: {
+                name: { type: ["string", "null"], example: "ADA OKAFOR" },
+                bankName: { type: ["string", "null"], example: "First Bank" },
+                accountNumber: { type: ["string", "null"], example: "******1001" },
+            },
+        },
     },
 };
 
@@ -112,6 +121,19 @@ const nairaDepositPaths = {
             parameters: [{ name: "nairaDepositId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
             responses: {
                 "200": { description: "The deposit.", content: jsonContent({ schema: dataEnvelope({ message: "Deposit fetched", code: 200, data: nairaDeposit }) }) },
+                "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"),
+                "404": error("No such deposit for this user.", "Deposit not found", 404),
+                "500": ref("ServerError"),
+            },
+        },
+    },
+    "/naira-deposits/{nairaDepositId}/cancel": {
+        post: {
+            tags: ["Naira deposits"], summary: "Cancel a top-up", operationId: "postNairaDepositCancellation", security: auth,
+            description: "The user no longer wants this top-up: it stops being the deposit in progress (`expired`), so `GET /naira-deposits/active` no longer returns it. **Money already sent to its account is still credited** when it arrives. A paid or finished deposit is returned unchanged. Starting a top-up for a new amount does this automatically for any older unpaid one.",
+            parameters: [{ name: "nairaDepositId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+            responses: {
+                "200": { description: "The deposit as it now stands.", content: jsonContent({ schema: dataEnvelope({ message: "Deposit cancelled", code: 200, data: nairaDeposit }) }) },
                 "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"),
                 "404": error("No such deposit for this user.", "Deposit not found", 404),
                 "500": ref("ServerError"),

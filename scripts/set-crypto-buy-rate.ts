@@ -1,7 +1,7 @@
 // scripts/set-crypto-buy-rate.ts — npm run crypto:set-rate -- USDT 1650 [--markup 1.5] [--hours 24] [--note "…"] [--force]
 // Sets our naira price per coin for buying. Append-only; expires (buying pauses) after --hours.
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { userInfo } from "os";
 import Decimal from "decimal.js";

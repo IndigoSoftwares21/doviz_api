@@ -3,7 +3,7 @@
 //   sent   — the coin left (settles it; --tx records the hash)
 //   refund — the provider confirms nothing was sent (returns the naira)
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { db, disconnect } from "../src/database";
 import createCryptoPurchaseSettlement from "../src/actions/cryptoPurchaseSettlement/createCryptoPurchaseSettlement";

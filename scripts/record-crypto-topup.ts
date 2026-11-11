@@ -1,7 +1,7 @@
 // scripts/record-crypto-topup.ts — npm run crypto:record-topup -- <provider> <SYMBOL> <quantity> <naira cost> [--note "…"]
 // Records coin bought into our stock at a provider and what it cost (for average cost and margin).
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { userInfo } from "os";
 import { db, disconnect } from "../src/database";

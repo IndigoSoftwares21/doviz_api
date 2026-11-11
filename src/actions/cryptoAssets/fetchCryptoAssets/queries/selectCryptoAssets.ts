@@ -9,6 +9,7 @@ const selectCryptoAssets = async ({ provider, environment }: { provider: string;
             "crypto_assets.symbol",
             "crypto_assets.network",
             "crypto_assets.name",
+            "crypto_provider_assets.providerAssetId",
             "crypto_provider_assets.minDeposit",
             "crypto_provider_assets.confirmations",
         ])

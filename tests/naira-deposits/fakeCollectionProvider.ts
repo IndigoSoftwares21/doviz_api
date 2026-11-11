@@ -31,5 +31,6 @@ export const bankTransferRecord = (overrides: Partial<ProviderBankTransfer> = {}
     amountPaid: { amount: "50375.00", currency: "NGN" },
     fee: { amount: "375.00", currency: "NGN" },
     paidAt: new Date(),
+    sender: null,
     ...overrides,
 });

@@ -1,7 +1,7 @@
 // scripts/use-crypto-send-provider.ts — npm run crypto-sends:use -- <provider>
 // Switches the provider for NEW crypto purchases. In-flight ones finish with their own provider.
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { db, disconnect } from "../src/database";
 import cryptoSendProviderRegistry from "../src/services/cryptoSends/cryptoSendProviderRegistry";

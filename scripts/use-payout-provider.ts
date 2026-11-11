@@ -1,7 +1,7 @@
 // scripts/use-payout-provider.ts — npm run payouts:use -- <provider>
 // Switches the provider for NEW withdrawals. In-flight ones finish with their own provider.
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { db, disconnect } from "../src/database";
 import payoutProviderRegistry from "../src/services/payouts/payoutProviderRegistry";

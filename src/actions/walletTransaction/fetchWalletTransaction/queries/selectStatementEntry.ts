@@ -9,6 +9,7 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
         .innerJoin("ledger_transactions", "ledger_transactions.id", "ledger_entries.transactionId")
         .leftJoin("crypto_deposits", "crypto_deposits.ledgerTransactionId", "ledger_transactions.id")
         .leftJoin("crypto_assets", "crypto_assets.id", "crypto_deposits.assetId")
+        .leftJoin("naira_deposits", "naira_deposits.ledgerTransactionId", "ledger_transactions.id")
         .select([
             "ledger_entries.id",
             "ledger_entries.amount",
@@ -27,6 +28,10 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "crypto_deposits.confirmations",
             "crypto_deposits.detectedAt",
             "crypto_deposits.completedAt",
+            "naira_deposits.id as nairaDepositId",
+            "naira_deposits.senderName",
+            "naira_deposits.senderBankName",
+            "naira_deposits.senderAccountNumber",
         ])
         .where("ledger_entries.id", "=", entryId)
         .where("ledger_accounts.kind", "=", LEDGER_ACCOUNT_KIND.USER_AVAILABLE)

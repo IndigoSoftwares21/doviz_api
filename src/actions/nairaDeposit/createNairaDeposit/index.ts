@@ -7,6 +7,7 @@ import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDepo
 import selectNairaDepositIdByIdempotencyKey from "./queries/selectNairaDepositIdByIdempotencyKey";
 import selectDepositCustomer from "./queries/selectDepositCustomer";
 import insertNairaDeposit from "./queries/insertNairaDeposit";
+import { closePendingDeposits } from "@/actions/nairaDepositCancellation/createNairaDepositCancellation";
 import issueBankTransfer from "./utils/issueBankTransfer";
 import isNairaDepositIdempotencyConflict from "./utils/isNairaDepositIdempotencyConflict";
 import ACTION_FAILURE from "@/constants/actionFailure";
@@ -30,8 +31,8 @@ interface ICreateNairaDeposit {
  * provider confirms the transfer. Repeating a request with the same
  * idempotency key returns the original deposit; asking again for the same
  * amount while that account still has time left reuses it (one live account
- * per top-up, not one per tap). A different amount gets a new account — the
- * old one is still credited if paid.
+ * per top-up, not one per tap). A different amount gets a new account and
+ * closes the older unpaid one (it's still credited if paid).
  */
 const createNairaDeposit = async ({ userId, amount, idempotencyKey, ipAddress, userAgent }: ICreateNairaDeposit) => {
     const replay = async () => {
@@ -95,6 +96,9 @@ const createNairaDeposit = async ({ userId, amount, idempotencyKey, ipAddress, u
                 userAgent,
                 metadata: { nairaDepositId: id, amount, fee: transfer.fee.amount, feeBearer, provider },
             });
+
+            // One top-up in progress: a new amount replaces any older unpaid one (still credited if paid).
+            await closePendingDeposits({ trx, userId, exceptId: id, reason: "replaced_by_new_top_up" });
         });
     } catch (error) {
         if (isNairaDepositIdempotencyConflict({ error })) {

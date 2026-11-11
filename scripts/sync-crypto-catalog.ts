@@ -1,6 +1,6 @@
 // scripts/sync-crypto-catalog.ts — npm run crypto:sync [-- <provider>]
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { disconnect } from "../src/database";
 import providerRegistry from "../src/services/crypto/providerRegistry";

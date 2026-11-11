@@ -1,7 +1,7 @@
 // scripts/sync-payout-banks.ts — npm run payouts:sync-banks [-- <provider>]
 // Pulls a payout provider's bank list into our banks (matched by slug), with its own codes.
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { disconnect } from "../src/database";
 import payoutProviderRegistry from "../src/services/payouts/payoutProviderRegistry";

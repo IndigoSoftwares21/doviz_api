@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import * as dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 interface TableColumn {
     table_name: string;

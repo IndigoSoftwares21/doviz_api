@@ -20,6 +20,9 @@ const selectActiveNairaDeposit = async ({ userId, now }: { userId: string; now: 
             "failureReason",
             "createdAt",
             "finalizedAt",
+            "senderName",
+            "senderBankName",
+            "senderAccountNumber",
         ])
         .where("userId", "=", userId)
         .where("status", "=", "pending")

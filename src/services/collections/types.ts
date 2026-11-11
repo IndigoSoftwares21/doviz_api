@@ -26,6 +26,17 @@ export interface ProviderBankTransferCreated {
     expiresAt: Date;
 }
 
+/**
+ * Who sent the money: the EXTERNAL account it came from (never our own
+ * collection account). `accountNumber` is masked to its last 4 digits.
+ */
+export interface ProviderTransferSender {
+    name: string | null;
+    bankName: string | null;
+    bankCode: string | null;
+    accountNumber: string | null;
+}
+
 /** The provider's own record of a transfer. */
 export interface ProviderBankTransfer {
     /** OUR naira_deposits.id, sent as the provider's reference. */
@@ -37,6 +48,8 @@ export interface ProviderBankTransfer {
     /** What the provider kept, whoever bore it. null until paid. */
     fee: Money | null;
     paidAt: Date | null;
+    /** null when the provider doesn't say (or not paid yet). */
+    sender: ProviderTransferSender | null;
 }
 
 export interface CreateBankTransferArgs {

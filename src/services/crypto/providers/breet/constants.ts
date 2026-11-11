@@ -10,6 +10,8 @@ const BREET = {
     PAGE_SIZE: 100,
     MAX_PAGES: 50,
     CACHE_TTL_MS: 10 * 60 * 1000,
+    /** Coin minimums follow the price, so they refresh more often than the asset list. */
+    MIN_DEPOSIT_CACHE_TTL_MS: 5 * 60 * 1000,
     /** Breet's published webhook sender IPs. */
     WEBHOOK_IPS: ["46.101.201.155", "46.101.225.109", "46.101.225.97", "46.101.225.251", "159.89.20.62"],
     DEPOSIT_EVENTS: ["trade.pending", "trade.completed", "trade.flagged", "trade.deleted"],

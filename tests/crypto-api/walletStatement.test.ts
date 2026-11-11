@@ -24,6 +24,8 @@ const entry = (id: string) => ({
     grossNgn: "157560.00", markupNgn: "1560.00", markupPercent: "1.00",
 });
 
+const noBankTransfer = { nairaDepositId: null, senderName: null, senderBankName: null, senderAccountNumber: null };
+
 describe("wallet statement routes", () => {
     beforeEach(() => {
         jest.resetAllMocks();
@@ -88,10 +90,25 @@ describe("wallet statement routes", () => {
         jest.mocked(selectUserStatementEntry).mockResolvedValue({ id: ENTRY });
         jest.mocked(selectStatementEntry).mockResolvedValue({
             ...entry(ENTRY), rateNgnPerUsd: "1575.60", txHash: "0xabc", confirmations: 20, detectedAt: new Date(), completedAt: new Date(),
+            ...noBankTransfer,
         });
         const response = await get(`/transactions/${ENTRY}`);
         expect(response.status).toBe(200);
         expect(response.body.data.deposit).toMatchObject({ rateNgnPerUsd: "1575.60", txHash: "0xabc", markupNgn: "1560.00" });
+        expect(response.body.data.bankTransfer).toBeNull();
+    });
+
+    it("shows who sent a bank-transfer top-up (masked), and null when the provider didn't say", async () => {
+        jest.mocked(selectUserStatementEntry).mockResolvedValue({ id: ENTRY });
+        const line = { ...entry(ENTRY), rateNgnPerUsd: null, txHash: null, confirmations: null, detectedAt: null, completedAt: null };
+        jest.mocked(selectStatementEntry).mockResolvedValue({
+            ...line, nairaDepositId: "dep-1", senderName: "ADA OKAFOR", senderBankName: "First Bank", senderAccountNumber: "******1001",
+        } as never);
+        const response = await get(`/transactions/${ENTRY}`);
+        expect(response.body.data.bankTransfer).toEqual({ id: "dep-1", sender: { name: "ADA OKAFOR", bankName: "First Bank", accountNumber: "******1001" } });
+
+        jest.mocked(selectStatementEntry).mockResolvedValue({ ...line, ...noBankTransfer, nairaDepositId: "dep-2" } as never);
+        expect((await get(`/transactions/${ENTRY}`)).body.data.bankTransfer).toEqual({ id: "dep-2", sender: null });
     });
 
     it("answers 400 for someone else's (or a missing) line and never loads it", async () => {

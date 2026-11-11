@@ -415,6 +415,10 @@ export interface Database {
     finalizedAt: ColumnType<Date | null>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    senderName: ColumnType<string | null>;
+    senderBankName: ColumnType<string | null>;
+    senderBankCode: ColumnType<string | null>;
+    senderAccountNumber: ColumnType<string | null>;
   };
 
   payout_banks: {
@@ -425,6 +429,15 @@ export interface Database {
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
     slug: ColumnType<string>;
+  };
+
+  payout_fee_defaults: {
+    provider: ColumnType<string>;
+    environment: ColumnType<string>;
+    currency: ColumnType<string>;
+    fixedFee: ColumnType<string>;
+    vatPercent: ColumnType<string>;
+    updatedAt: Generated<Date>;
   };
 
   phone_otps: {

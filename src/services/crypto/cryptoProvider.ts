@@ -41,6 +41,14 @@ export interface CryptoProvider {
     /** Estimated naira (after the provider's own fee) for a crypto amount. */
     getQuote(args: { providerAssetId: string; cryptoAmount: string }): Promise<ProviderQuote>;
 
+    /**
+     * The smallest deposit the provider accepts, IN COIN UNITS, right now.
+     * Optional: for providers whose minimum isn't a fixed coin amount (e.g. a
+     * USD value that moves with the price). Without it, the synced catalog's
+     * minDeposit is used.
+     */
+    getMinDeposit?(args: { providerAssetId: string }): Promise<string | null>;
+
     /** True only for an authentic request from this provider. */
     verifyWebhook(request: WebhookRequest): boolean;
     parseWebhook(body: unknown): ProviderWebhookEvent | null;

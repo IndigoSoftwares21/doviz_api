@@ -1,6 +1,6 @@
 // scripts/set-conversion-markup.ts — npm run crypto:set-markup -- <SYMBOL> <NETWORK> <percent> [note]
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" }); // .env.production under the :prod commands
 
 import { db, disconnect } from "../src/database";
 

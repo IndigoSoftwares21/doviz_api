@@ -9,6 +9,31 @@ const provider = (http: FakeBreetHttp) => new BreetProvider({ client: fakeClient
 const wallet = (n: number, label: string) => ({ id: `w${n}`, label, address: `addr${n}`, identifier: "USDT_TRX_TEST2", asset: "a-usdt" });
 
 describe("BreetProvider", () => {
+    it("turns Breet's USD minimum into coin units with its own $1 rate, rounded up, cached", async () => {
+        const btc = { id: "a-btc", name: "Bitcoin Test", identifier: "BTC_TEST", symbol: "BTC", network: "Bitcoin", confirmations: 1, minimum: 5 };
+        const http = new FakeBreetHttp()
+            .reply("GET /trades/assets", ok([...assets, btc]))
+            .reply("POST /trades/pbc/sell/rate-calculator/a-btc", ok({ NGNAmount: 1390, rate: 1390, cryptoAmount: 0.0000166666 }));
+        const breet = provider(http);
+
+        await expect(breet.getMinDeposit({ providerAssetId: "a-btc" })).resolves.toBe("0.0000834"); // $5 = 0.000083333 BTC → up
+        await expect(breet.getMinDeposit({ providerAssetId: "a-btc" })).resolves.toBe("0.0000834");
+        expect(http.requests.filter((r) => r.url.includes("rate-calculator"))).toHaveLength(1);
+        expect(http.requests.find((r) => r.url.includes("rate-calculator"))?.data).toEqual({ amountInUSD: 1, currency: "ngn" });
+    });
+
+    it("rounds a whole-coin minimum up to the cent, not to 3 digits ($10 of USDT → 10.02, not 10.1)", async () => {
+        const http = new FakeBreetHttp()
+            .reply("GET /trades/assets", ok([{ ...assets[1], minimum: 10 }]))
+            .reply("POST /trades/pbc/sell/rate-calculator/a-usdt", ok({ NGNAmount: 1390, rate: 1390, cryptoAmount: 1.0015 }));
+        await expect(provider(http).getMinDeposit({ providerAssetId: "a-usdt" })).resolves.toBe("10.02"); // 10.015 → up
+    });
+
+    it("has no minimum for an asset Breet doesn't give one for", async () => {
+        const http = new FakeBreetHttp().reply("GET /trades/assets", ok([{ ...assets[0], minimum: null }]));
+        await expect(provider(http).getMinDeposit({ providerAssetId: assets[0].id })).resolves.toBeNull();
+    });
+
     it("recognises only Breet's dashboard verification ping", () => {
         const breet = provider(new FakeBreetHttp());
         expect(breet.isWebhookPing({ event: "webhook.verification" })).toBe(true);

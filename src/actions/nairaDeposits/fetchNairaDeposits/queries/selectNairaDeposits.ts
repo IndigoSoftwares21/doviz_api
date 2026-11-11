@@ -20,6 +20,9 @@ const selectNairaDeposits = async ({ userId, limit, offset }: { userId: string; 
             "failureReason",
             "createdAt",
             "finalizedAt",
+            "senderName",
+            "senderBankName",
+            "senderAccountNumber",
         ])
         .where("userId", "=", userId)
         .orderBy("createdAt", "desc")
