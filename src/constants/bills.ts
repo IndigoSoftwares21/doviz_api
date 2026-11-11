@@ -37,6 +37,18 @@ export const BILL_CATEGORY = {
     INTERNET: "internet",
 } as const;
 
+/**
+ * How each category reads on the statement: the purchase line, and its
+ * refund line. Keyed by BILL_CATEGORY.
+ */
+export const BILL_STATEMENT_LABEL: Record<string, { purchase: string; refund: string }> = {
+    [BILL_CATEGORY.AIRTIME]: { purchase: "Airtime purchase", refund: "Airtime refund" },
+    [BILL_CATEGORY.DATA]: { purchase: "Data purchase", refund: "Data refund" },
+    [BILL_CATEGORY.ELECTRICITY]: { purchase: "Electricity bill", refund: "Electricity refund" },
+    [BILL_CATEGORY.CABLE_TV]: { purchase: "Cable TV subscription", refund: "Cable TV refund" },
+    [BILL_CATEGORY.INTERNET]: { purchase: "Internet subscription", refund: "Internet refund" },
+};
+
 /** fixed = one price (bundle, plan); range = any amount between min and max (airtime, electricity). */
 export const BILL_AMOUNT_TYPE = {
     FIXED: "fixed",

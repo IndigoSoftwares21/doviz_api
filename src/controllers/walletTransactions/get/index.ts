@@ -6,10 +6,10 @@ import getWalletTransactionsSchema from "./schema/getWalletTransactionsSchema";
 
 const getWalletTransactions = async (req: Request, res: Response) => {
     try {
-        const { cursor, size, direction, type, from, to } = req.query;
+        const { cursor, size, direction, type, from, to, q } = req.query;
         const { id: userId } = req.user!;
 
-        const validated = await getWalletTransactionsSchema.parseAsync({ cursor, size, direction, type, from, to });
+        const validated = await getWalletTransactionsSchema.parseAsync({ cursor, size, direction, type, from, to, q });
 
         const { data } = await fetchWalletTransactions({
             userId,
@@ -20,6 +20,7 @@ const getWalletTransactions = async (req: Request, res: Response) => {
                 type: validated.type ?? null,
                 from: validated.from ?? null,
                 to: validated.to ?? null,
+                search: validated.q ?? null,
             },
         });
 

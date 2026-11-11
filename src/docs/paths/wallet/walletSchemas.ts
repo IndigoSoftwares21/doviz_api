@@ -1,6 +1,7 @@
 import { statementTransfer } from "@/docs/paths/transfers/transferSchemas";
 import { LEDGER_TRANSACTION_TYPE, ENTRY_DIRECTION } from "@/constants/ledger";
 import { DEPOSIT_STATUS } from "@/constants/cryptoStatus";
+import { BILL_CATEGORY } from "@/constants/bills";
 
 const money = (example: string) => ({ type: "string", example });
 const nullableMoney = { type: ["string", "null"], example: "1560.00" };
@@ -24,10 +25,21 @@ const statementLine = (deposit: Record<string, unknown>) => ({
         direction: { type: "string", enum: Object.values(ENTRY_DIRECTION) },
         amount: { ...money("156000.00"), description: "Always positive; see `direction`." },
         balanceAfter: money("156000.00"),
-        description: { type: "string", example: "100 USDT converted to naira" },
+        description: { type: "string", example: "100 USDT converted to naira", description: "Bills say their kind, e.g. \"Airtime purchase\"." },
         createdAt: dateTime,
         deposit: { type: ["object", "null"], properties: deposit, description: "Set for crypto conversions." },
         transfer: statementTransfer,
+        bill: {
+            type: ["object", "null"],
+            description: "Set for bill payments and their refunds.",
+            properties: {
+                id: { type: "string", format: "uuid", description: "The bill payment." },
+                category: { type: ["string", "null"], enum: [...Object.values(BILL_CATEGORY), null] },
+                billerName: { type: ["string", "null"], example: "MTN" },
+                productName: { type: ["string", "null"], example: "1.5GB - 30 days" },
+                customerId: { type: ["string", "null"], example: "08031234567", description: "Phone, meter or smartcard number." },
+            },
+        },
     },
 });
 

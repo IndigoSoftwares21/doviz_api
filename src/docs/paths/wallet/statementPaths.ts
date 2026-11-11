@@ -31,6 +31,11 @@ const statementPaths = {
                     description: "Inclusive. ISO 8601 with offset, e.g. `2026-11-01T00:00:00+01:00`.",
                 },
                 {
+                    name: "q", in: "query", schema: { type: "string", minLength: 2, maxLength: 50 },
+                    description: "Search: biller (\"MTN\"), coin (\"USDT\"), exact amount (\"1,000\"), reference prefix, "
+                        + "phone/meter number, or the kind of transaction (\"airtime\", \"electricity\", \"refund\", \"withdrawal\").",
+                },
+                {
                     name: "to", in: "query", schema: { type: "string", format: "date-time" },
                     description: "Exclusive; must be after `from`. A range is at most 366 days.",
                 },

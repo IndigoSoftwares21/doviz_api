@@ -38,6 +38,7 @@ const fetchWalletTransaction = async ({ userId, entryId }: { userId: string; ent
                       : null,
               }
             : null,
+        bill: item.bill,
     };
 
     return { data };

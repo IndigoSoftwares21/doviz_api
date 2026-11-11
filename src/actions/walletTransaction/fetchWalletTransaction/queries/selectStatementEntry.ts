@@ -13,6 +13,18 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
         .leftJoin("users as transfer_sender", "transfer_sender.id", "internal_transfers.senderId")
         .leftJoin("users as transfer_recipient", "transfer_recipient.id", "internal_transfers.recipientId")
         .leftJoin("naira_deposits", "naira_deposits.ledgerTransactionId", "ledger_transactions.id")
+        // The bill this line belongs to: its hold, or its final settle/refund
+        // (both columns are unique, so at most one payment matches).
+        .leftJoin("bill_payments", (join) =>
+            join.on((eb) =>
+                eb.or([
+                    eb("bill_payments.holdLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                    eb("bill_payments.finalLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                ]),
+            ),
+        )
+        .leftJoin("billers", "billers.id", "bill_payments.billerId")
+        .leftJoin("bill_products", "bill_products.id", "bill_payments.productId")
         .select([
             "ledger_entries.id",
             "ledger_entries.amount",
@@ -34,6 +46,11 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "transfer_sender.lastName as transferSenderLastName",
             "transfer_recipient.firstName as transferRecipientFirstName",
             "transfer_recipient.lastName as transferRecipientLastName",
+            "bill_payments.id as billPaymentId",
+            "billers.categoryCode as billCategory",
+            "billers.name as billerName",
+            "bill_products.name as billProductName",
+            "bill_payments.customerId as billCustomerId",
             "crypto_deposits.rateNgnPerUsd",
             "crypto_deposits.txHash",
             "crypto_deposits.confirmations",

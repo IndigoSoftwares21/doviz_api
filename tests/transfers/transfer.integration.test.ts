@@ -15,7 +15,7 @@ jest.mock("@/actions/pinVerification/createPinVerification");
 jest.mock("@/services/realtime/publishUserEvent");
 
 const run = process.env.DB_INTEGRATION === "true" ? describe : describe.skip;
-const NO_FILTERS = { direction: null, type: null, from: null, to: null };
+const NO_FILTERS = { direction: null, type: null, from: null, to: null, search: null };
 
 run("transfers against Postgres: money", () => {
     const h = createTransferHarness();

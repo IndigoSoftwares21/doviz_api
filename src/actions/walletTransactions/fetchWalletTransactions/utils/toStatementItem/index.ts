@@ -16,9 +16,14 @@ interface StatementRow extends StatementTransferRow {
     grossNgn: string | null;
     markupNgn: string | null;
     markupPercent: string | null;
+    billPaymentId: string | null;
+    billCategory: string | null;
+    billerName: string | null;
+    billProductName: string | null;
+    billCustomerId: string | null;
 }
 
-/** One statement line: absolute amount + direction, balance after, and its source. */
+/** One statement line: absolute amount + direction, balance after, and its source (deposit or bill). */
 const toStatementItem = ({ row }: { row: StatementRow }) => {
     const amount = new Decimal(row.amount);
     const transfer = toStatementTransfer({ row, isDebit: amount.isNegative() });
@@ -29,7 +34,14 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
         direction: amount.isNegative() ? ENTRY_DIRECTION.DEBIT : ENTRY_DIRECTION.CREDIT,
         amount: amount.abs().toFixed(2),
         balanceAfter: new Decimal(row.balanceAfter).toFixed(2),
-        description: transfer?.description ?? describeStatementEntry({ type: row.type, symbol: row.symbol, cryptoAmount: row.cryptoAmount }),
+        description:
+            transfer?.description ??
+            describeStatementEntry({
+                type: row.type,
+                symbol: row.symbol,
+                cryptoAmount: row.cryptoAmount,
+                billCategory: row.billCategory,
+            }),
         createdAt: row.createdAt,
         deposit: row.depositId
             ? {
@@ -40,6 +52,15 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
                   grossNgn: row.grossNgn,
                   markupNgn: row.markupNgn,
                   markupPercent: row.markupPercent,
+              }
+            : null,
+        bill: row.billPaymentId
+            ? {
+                  id: row.billPaymentId,
+                  category: row.billCategory,
+                  billerName: row.billerName,
+                  productName: row.billProductName,
+                  customerId: row.billCustomerId,
               }
             : null,
         /** A Ziks-to-Ziks transfer: who it was with (as on the transfer). */
