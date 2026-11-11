@@ -205,6 +205,16 @@ export interface Database {
     isBuyEnabled: ColumnType<boolean>;
   };
 
+  crypto_buy_markups: {
+    id: Generated<string>;
+    symbol: ColumnType<string>;
+    markupPercent: ColumnType<string>;
+    note: ColumnType<string | null>;
+    updatedBy: ColumnType<string>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
   crypto_buy_rates: {
     id: Generated<string>;
     symbol: ColumnType<string>;
@@ -296,6 +306,9 @@ export interface Database {
     finalizedAt: ColumnType<Date | null>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    priceSource: ColumnType<string>;
+    marketPriceUsdt: ColumnType<string | null>;
+    markupPercent: ColumnType<string | null>;
   };
 
   crypto_stock_movements: {

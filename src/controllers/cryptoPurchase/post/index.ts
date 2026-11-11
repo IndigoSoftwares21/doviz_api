@@ -9,10 +9,20 @@ import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 
 const postCryptoPurchase = async (req: Request, res: Response) => {
     try {
-        const { assetId, cryptoAmount, nairaTotal, address, memo, expectedTotal, idempotencyKey, pin } = req.body;
+        const { assetId, cryptoAmount, nairaTotal, address, memo, expectedTotal, expectedCryptoAmount, idempotencyKey, pin } = req.body;
         const { id: userId } = req.user!;
 
-        const validated = await postCryptoPurchaseSchema.parseAsync({ assetId, cryptoAmount, nairaTotal, address, memo, expectedTotal, idempotencyKey, pin });
+        const validated = await postCryptoPurchaseSchema.parseAsync({
+            assetId,
+            cryptoAmount,
+            nairaTotal,
+            address,
+            memo,
+            expectedTotal,
+            expectedCryptoAmount,
+            idempotencyKey,
+            pin,
+        });
 
         const { data, failure, verification, isNew, limits } = await createCryptoPurchase({
             userId,
@@ -22,6 +32,7 @@ const postCryptoPurchase = async (req: Request, res: Response) => {
             address: validated.address,
             memo: validated.memo ?? null,
             expectedTotal: validated.expectedTotal,
+            expectedCryptoAmount: validated.expectedCryptoAmount ?? null,
             idempotencyKey: validated.idempotencyKey,
             pin: validated.pin,
             ipAddress: req.ip ?? null,

@@ -25,6 +25,13 @@ export interface CryptoSendProvider {
     getBalance?(args: { providerAssetId: string }): Promise<string | null>;
 
     /**
+     * What ONE unit of `symbol` costs in USDT right now (e.g. ETH → "2071.59"),
+     * for coins priced from the market rather than a rate we set. Optional:
+     * without it, such coins are unavailable. Throws when it can't tell.
+     */
+    getUsdtPrice?(args: { symbol: string }): Promise<string>;
+
+    /**
      * Sends `amount` (exactly what the recipient must receive) to `address`.
      * `externalId` is our purchase id; the provider records it so a lost
      * response can be found with getSend. Failures throw CryptoSendProviderError.

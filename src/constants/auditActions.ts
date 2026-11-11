@@ -31,6 +31,7 @@ const AUDIT_ACTIONS = {
     CRYPTO_PURCHASE_REFUNDED: "crypto.purchase.refunded",
     CRYPTO_PURCHASE_NEEDS_REVIEW: "crypto.purchase.needs_review",
     CRYPTO_BUY_RATE_SET: "ops.crypto_buy_rate.set",
+    CRYPTO_BUY_MARKUP_SET: "ops.crypto_buy_markup.set",
     CRYPTO_STOCK_RECORDED: "ops.crypto_stock.recorded",
     TRANSFER_SENT: "wallet.transfer.sent",
     TRANSFER_RECEIVED: "wallet.transfer.received",

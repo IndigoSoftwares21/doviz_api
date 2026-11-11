@@ -128,12 +128,16 @@ describe("KucoinCryptoSendProvider", () => {
         await expect(kucoin(gone).getSend({ externalId: ID, providerReference: "w-x", providerAssetId: "USDT:trx" })).resolves.toBeNull();
     });
 
-    it("lists one sendable asset per chain, from the public currency endpoint (unsigned)", async () => {
-        const http = new FakeKucoinHttp().reply("GET /api/v3/currencies/USDT", ok(usdtCurrency));
+    it("lists one sendable asset per chain of USDT, USDC and ETH, from the public currency endpoint (unsigned)", async () => {
+        const ethCurrency = { currency: "ETH", precision: 8, chains: [{ chainId: "base", withdrawalMinFee: "0.0001", withdrawalMinSize: "0.0002", withdrawPrecision: 8, needTag: false, isWithdrawEnabled: true }] };
+        const http = new FakeKucoinHttp()
+            .reply("GET /api/v3/currencies/USDT", ok(usdtCurrency))
+            .reply("GET /api/v3/currencies/USDC", ok({ currency: "USDC", precision: 8, chains: [] }))
+            .reply("GET /api/v3/currencies/ETH", ok(ethCurrency));
         const assets = await kucoin(http).listSendableAssets();
 
-        expect(http.requests[0].headers["KC-API-SIGN"]).toBeUndefined();
-        expect(assets.map((asset) => asset.providerAssetId)).toEqual(["USDT:trx", "USDT:bsc", "USDT:eth"]);
+        expect(http.requests.every((request) => request.headers["KC-API-SIGN"] === undefined)).toBe(true);
+        expect(assets.map((asset) => asset.providerAssetId)).toEqual(["USDT:trx", "USDT:bsc", "USDT:eth", "ETH:base"]);
         expect(assets[0]).toEqual({
             providerAssetId: "USDT:trx", providerCode: "USDT", symbol: "USDT", providerNetwork: "trx",
             terms: { fee: "1", minAmount: "10", precision: 6, memoRequired: false, isEnabled: true },

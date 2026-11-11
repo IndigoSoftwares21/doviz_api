@@ -33,12 +33,13 @@ const cryptoPurchaseFailureResponse = ({ failure, limits }: { failure: string | 
         case ACTION_FAILURE.INSUFFICIENT_BALANCE:
             return { code: 402, message: CRYPTO_BUY_MESSAGES.INSUFFICIENT_BALANCE };
         case ACTION_FAILURE.AMOUNT_OUT_OF_RANGE:
-            return limits
-                ? {
-                      code: 400,
-                      message: `Buy at least ${limits.minCrypto} ${limits.symbol} (₦${FormatNaira({ value: limits.minTotal })} minimum), up to ₦${FormatNaira({ value: limits.maxTotal })} at a time.`,
-                  }
-                : { code: 400, message: CRYPTO_BUY_MESSAGES.ASSET_UNAVAILABLE };
+            if (!limits) return { code: 400, message: CRYPTO_BUY_MESSAGES.ASSET_UNAVAILABLE };
+            return {
+                code: 400,
+                message: limits.tooHigh
+                    ? `You can buy up to ₦${FormatNaira({ value: limits.maxTotal })} at a time.`
+                    : `The minimum is ₦${FormatNaira({ value: limits.minTotal })}.`,
+            };
         default:
             return null;
     }

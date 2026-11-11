@@ -10,6 +10,7 @@ import { fromProviderAssetId } from "./kucoinAssetId";
 import { KucoinAccount, KucoinCurrency, KucoinWithdrawalQuota } from "./kucoinTypes";
 import mapKucoinCurrency from "./mapKucoinCurrency";
 import findKucoinSend from "./findKucoinSend";
+import fetchKucoinUsdtPrice from "./fetchKucoinUsdtPrice";
 
 export { toProviderAssetId, fromProviderAssetId } from "./kucoinAssetId";
 
@@ -61,6 +62,10 @@ class KucoinCryptoSendProvider implements CryptoSendProvider {
         const { currency } = fromProviderAssetId({ providerAssetId });
         const accounts = await this.client.request<KucoinAccount[]>({ method: "GET", path: "/api/v1/accounts", query: { type: "main", currency } });
         return (accounts ?? []).reduce((sum, account) => sum.plus(account.available || "0"), new Decimal(0)).toFixed();
+    }
+
+    getUsdtPrice({ symbol }: { symbol: string }) {
+        return fetchKucoinUsdtPrice({ client: this.client, symbol });
     }
 
     async send({ externalId, providerAssetId, address, memo, amount }: { externalId: string; providerAssetId: string; address: string; memo: string | null; amount: string }): Promise<ProviderSend> {

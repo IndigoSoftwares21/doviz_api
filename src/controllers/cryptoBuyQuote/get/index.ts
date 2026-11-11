@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import Decimal from "decimal.js";
 import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import fetchCryptoBuyQuote from "@/actions/cryptoBuyQuote/fetchCryptoBuyQuote";
@@ -11,10 +12,13 @@ const getCryptoBuyQuote = async (req: Request, res: Response) => {
 
         const validated = await getCryptoBuyQuoteSchema.parseAsync({ assetId, cryptoAmount, nairaTotal });
 
-        const { data, failure, limits } = await fetchCryptoBuyQuote(validated);
-        if (!data) {
-            const failed = cryptoPurchaseFailureResponse({ failure, limits }) ?? { code: 503, message: "Couldn't price this purchase" };
-            return handleError({ res, req, message: failed.message, code: failed.code });
+        const { data, failure, limits, preview } = await fetchCryptoBuyQuote(validated);
+        // Out of limits but priceable: still show the conversion, flagged as not buyable.
+        const priced = data ?? preview;
+        const failed = data ? null : cryptoPurchaseFailureResponse({ failure, limits });
+        if (!priced) {
+            const problem = failed ?? { code: 503, message: "Couldn't price this purchase" };
+            return handleError({ res, req, message: problem.message, code: problem.code });
         }
 
         res.set("Cache-Control", "no-store");
@@ -25,16 +29,20 @@ const getCryptoBuyQuote = async (req: Request, res: Response) => {
             message: "Crypto quote",
             code: 200,
             data: {
-                asset: data.asset,
-                memoRequired: data.memoRequired,
-                cryptoAmount: data.cryptoAmount,
-                networkFee: data.networkFee,
-                unitPrice: data.unitPrice,
-                currency: data.currency,
-                nairaAmount: data.nairaAmount,
-                nairaFee: data.nairaFee,
-                total: data.total,
-                expiresAt: data.rateExpiresAt,
+                canBuy: data !== null,
+                limitMessage: failed?.message ?? null,
+                asset: priced.asset,
+                memoRequired: priced.memoRequired,
+                // The plain conversion (naira ÷ price), before the network fee comes off.
+                convertedAmount: new Decimal(priced.cryptoAmount).plus(priced.networkFee).toFixed(),
+                cryptoAmount: priced.cryptoAmount,
+                networkFee: priced.networkFee,
+                unitPrice: priced.unitPrice,
+                currency: priced.currency,
+                nairaAmount: priced.nairaAmount,
+                nairaFee: priced.nairaFee,
+                total: priced.total,
+                expiresAt: priced.rateExpiresAt,
             },
         });
     } catch (error) {

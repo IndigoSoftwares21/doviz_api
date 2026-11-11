@@ -7,7 +7,15 @@ import { ProviderSend, ProviderSendableAsset } from "../../types";
 const ASSETS: ProviderSendableAsset[] = [
     { providerAssetId: "USDT:trx", providerCode: "USDT", symbol: "USDT", providerNetwork: "trx", terms: { fee: "1", minAmount: "1", precision: 6, memoRequired: false, isEnabled: true } },
     { providerAssetId: "USDT:bsc", providerCode: "USDT", symbol: "USDT", providerNetwork: "bsc", terms: { fee: "0.3", minAmount: "1", precision: 6, memoRequired: false, isEnabled: true } },
+    { providerAssetId: "USDT:sol", providerCode: "USDT", symbol: "USDT", providerNetwork: "sol", terms: { fee: "1", minAmount: "3", precision: 6, memoRequired: false, isEnabled: true } },
+    { providerAssetId: "USDC:eth", providerCode: "USDC", symbol: "USDC", providerNetwork: "eth", terms: { fee: "5", minAmount: "1", precision: 6, memoRequired: false, isEnabled: true } },
+    { providerAssetId: "USDC:base", providerCode: "USDC", symbol: "USDC", providerNetwork: "base", terms: { fee: "0.5", minAmount: "1", precision: 6, memoRequired: false, isEnabled: true } },
+    { providerAssetId: "ETH:eth", providerCode: "ETH", symbol: "ETH", providerNetwork: "eth", terms: { fee: "0.0015", minAmount: "0.003", precision: 8, memoRequired: false, isEnabled: true } },
+    { providerAssetId: "ETH:base", providerCode: "ETH", symbol: "ETH", providerNetwork: "base", terms: { fee: "0.0001", minAmount: "0.0002", precision: 8, memoRequired: false, isEnabled: true } },
 ];
+
+/** Made-up USDT prices for coins priced from the market (local testing only). */
+const PRICES: Record<string, string> = { USDC: "1", ETH: "2000" };
 
 /**
  * A pretend sender for local development and e2e runs (KuCoin has no
@@ -34,6 +42,12 @@ class FakeCryptoSendProvider implements CryptoSendProvider {
 
     async getBalance() {
         return process.env.FAKE_CRYPTO_STOCK ?? "100000";
+    }
+
+    async getUsdtPrice({ symbol }: { symbol: string }) {
+        const price = PRICES[symbol];
+        if (!price) throw new Error(`fakesend: no price for ${symbol}`);
+        return price;
     }
 
     async send({ externalId, amount }: { externalId: string; providerAssetId: string; address: string; memo: string | null; amount: string }) {

@@ -1,13 +1,13 @@
 import Decimal from "decimal.js";
 import fetchActiveCryptoSendProvider from "@/actions/cryptoSendProvider/fetchActiveCryptoSendProvider";
-import fetchCryptoBuyRate from "@/actions/cryptoBuyRate/fetchCryptoBuyRate";
+import fetchCryptoBuyPrice, { CryptoBuyPrice } from "@/actions/cryptoBuyPrice/fetchCryptoBuyPrice";
 import selectBuyAssets from "@/actions/cryptoBuyQuote/fetchCryptoBuyQuote/queries/selectBuyAsset";
 import priceCryptoPurchase from "@/utils/cryptoPurchases/priceCryptoPurchase";
 import CRYPTO_PURCHASES from "@/constants/cryptoPurchases";
 
 /**
  * Coins the user can buy right now, each with its network fee, minimum and
- * our current unit price. A coin without a rate in force is listed as
+ * our current unit price (a rate we set, or from the market). A coin without a price is listed as
  * unavailable (so the app can say so) rather than hidden. Catalog terms only —
  * the quote checks them live.
  */
@@ -16,8 +16,8 @@ const fetchCryptoBuyAssets = async () => {
     if (!provider) return { data: [] };
 
     const assets = await selectBuyAssets({ provider: provider.name, environment: provider.environment });
-    const rates = new Map<string, Awaited<ReturnType<typeof fetchCryptoBuyRate>>["data"]>();
-    for (const symbol of new Set(assets.map((asset) => asset.symbol))) rates.set(symbol, (await fetchCryptoBuyRate({ symbol })).data);
+    const rates = new Map<string, CryptoBuyPrice | null>();
+    for (const symbol of new Set(assets.map((asset) => asset.symbol))) rates.set(symbol, (await fetchCryptoBuyPrice({ provider, symbol })).data);
 
     const data = assets.map((asset) => {
         const rate = rates.get(asset.symbol) ?? null;

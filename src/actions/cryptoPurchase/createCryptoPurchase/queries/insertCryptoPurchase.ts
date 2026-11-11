@@ -15,6 +15,9 @@ interface IInsertCryptoPurchase {
     cryptoAmount: string;
     networkFee: string;
     rateId: string;
+    priceSource: string;
+    marketPriceUsdt: string | null;
+    markupPercent: string;
     unitPrice: string;
     currency: string;
     nairaAmount: string;

@@ -25,16 +25,19 @@ export const buyAssetListItem = {
         minAmount: { type: ["string", "null"], example: "1" },
         networkFee: { type: ["string", "null"], example: "1", description: "In the coin; priced into the naira total." },
         currency: { type: "string", example: "NGN" },
-        unitPrice: money("1650.00", "Naira per coin right now; null while prices are being updated."),
-        isAvailable: { type: "boolean", example: true },
+        unitPrice: money("1650.00", "Naira per coin right now (USDT: our rate; USDC, ETH…: from the live market, moves); null while prices are being updated."),
+        isAvailable: { type: "boolean", example: true, description: "false while there's no price we trust (rate expired, or no live market price): shown, not buyable." },
     },
 };
 
 export const buyQuote = {
     type: "object",
     properties: {
+        canBuy: { type: "boolean", example: true, description: "false: outside the limits — show the conversion and `limitMessage`, disable Buy." },
+        limitMessage: { type: ["string", "null"], example: null, description: "Why it can't be bought (minimum / maximum); null when `canBuy`." },
         asset: buyAsset,
         memoRequired: { type: "boolean", example: false },
+        convertedAmount: coin("11", "The plain conversion (naira ÷ price) before the network fee. Show this while typing; show the fee and `cryptoAmount` on confirm."),
         cryptoAmount: coin("10", "Exactly what arrives at the address."),
         networkFee: coin("1", "The network fee in the coin (included in `total`)."),
         unitPrice: money("1650.00"),

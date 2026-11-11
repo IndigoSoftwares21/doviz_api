@@ -33,6 +33,7 @@
     "crypto-sends:sync": "ts-node -r tsconfig-paths/register scripts/sync-crypto-sends.ts",
     "crypto-sends:use": "ts-node -r tsconfig-paths/register scripts/use-crypto-send-provider.ts",
     "crypto:set-rate": "ts-node -r tsconfig-paths/register scripts/set-crypto-buy-rate.ts",
+    "crypto:set-buy-markup": "ts-node -r tsconfig-paths/register scripts/set-crypto-buy-markup.ts",
     "crypto:record-topup": "ts-node -r tsconfig-paths/register scripts/record-crypto-topup.ts",
     "crypto-purchases:resolve": "ts-node -r tsconfig-paths/register scripts/resolve-crypto-purchase.ts",
     "transfers:set-limits": "ts-node -r tsconfig-paths/register scripts/set-transfer-limits.ts",

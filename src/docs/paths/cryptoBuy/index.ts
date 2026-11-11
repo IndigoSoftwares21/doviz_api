@@ -24,10 +24,10 @@ const cryptoBuyPaths = {
     "/crypto/buy/quote": {
         get: {
             tags, summary: "Price a purchase", operationId: "getCryptoBuyQuote", security: auth, parameters: amountInputs,
-            description: "What buying costs right now. The network fee is priced in, so `cryptoAmount` arrives exactly. Show `total` on the confirm screen and send it back as `expectedTotal`.",
+            description: "What buying costs right now. The network fee is priced in, so `cryptoAmount` arrives exactly. Show `total` on the confirm screen and send it back as `expectedTotal`.\n\nAn amount outside the limits still returns **200** with the conversion, but `canBuy: false` and `limitMessage` (e.g. \"The minimum is ₦15,180.00.\"): show the conversion and the message, and disable Buy. The minimum is the provider's smallest send for this coin, priced at our rate (or ₦1,000 if higher).",
             responses: {
                 "200": ok("The quote.", "Crypto quote", buyQuote),
-                "400": error("Validation failed, the coin isn't buyable now, or the amount is outside the limits.", "Buy at least 1 USDT (₦1,000.00 minimum), up to ₦5,000,000.00 at a time.", 400),
+                "400": error("Validation failed, the coin isn't buyable now, or the amount is too small to buy any coin.", "The minimum is ₦15,180.00.", 400),
                 "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"), "503": unavailable,
             },
         },
@@ -37,14 +37,14 @@ const cryptoBuyPaths = {
             tags, summary: "Buy crypto", operationId: "postCryptoPurchase", security: auth,
             description: `Buys a coin with naira and sends it to the user's own wallet address. Requires the transfer PIN.
 
-- \`expectedTotal\` is the quote's \`total\`. If the price changed since, nothing is taken: **409** — fetch a new quote and confirm again.
+- \`expectedTotal\` is the quote's \`total\` and \`expectedCryptoAmount\` its \`cryptoAmount\`. Prices of coins like ETH move between the quote and the PIN, so the server re-prices: it goes ahead at the fresh price when the user pays **no more** than \`expectedTotal\` and gets **no more than 0.5% less** coin than \`expectedCryptoAmount\` (the same or more is always fine). Otherwise nothing is taken: **409** — show the new quote and confirm again. Without \`expectedCryptoAmount\` (older apps) the total must match exactly.
 - \`total\` leaves the balance at once; the result arrives on the socket (\`crypto_purchase.updated\`). Show "Sending…" straight away.
 - \`failed\` means the full total is back in the balance. An unclear outcome is never refunded on a guess (crypto can't be pulled back): it becomes \`needs_review\`.
 - Send a new UUID \`idempotencyKey\` per purchase and reuse it to retry — a retry returns the original (200), never a second send.`,
             requestBody: { required: true, content: jsonContent({ schema: { type: "object", required: ["assetId", "address", "expectedTotal", "idempotencyKey", "pin"], properties: {
                 assetId: { type: "string", format: "uuid" }, cryptoAmount: { type: "string", example: "10" }, nairaTotal: { type: "string", example: "20000.00" },
                 address: { type: "string", example: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t" }, memo: { type: "string" },
-                expectedTotal: { type: "string", example: "18150.00" }, idempotencyKey: { type: "string", format: "uuid" }, pin: { $ref: "#/components/schemas/Pin" },
+                expectedTotal: { type: "string", example: "18150.00" }, expectedCryptoAmount: { type: "string", example: "0.01780000", description: "The quote's cryptoAmount (recommended)." }, idempotencyKey: { type: "string", format: "uuid" }, pin: { $ref: "#/components/schemas/Pin" },
             } } }) },
             responses: {
                 "201": ok("Sent (usually `pending`).", "Crypto purchase sent", cryptoPurchase, 201),
@@ -53,7 +53,7 @@ const cryptoBuyPaths = {
                 "401": ref("Unauthorized"),
                 "402": error("The balance doesn't cover the total.", "You don't have enough naira for this purchase.", 402),
                 "403": ref("Forbidden"),
-                "409": error("The price changed since the quote; nothing was taken.", "The price changed. Please check the new total and confirm again.", 409),
+                "409": error("The price moved against the user since the quote (more naira, or over 0.5% less coin); nothing was taken.", "The price changed. Please check the new total and confirm again.", 409),
                 "423": ref("PinLocked"), "500": ref("ServerError"), "503": unavailable,
             },
         },

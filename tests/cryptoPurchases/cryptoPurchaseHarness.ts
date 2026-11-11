@@ -51,7 +51,7 @@ export const createHarness = () => {
     };
 
     const buy = ({ cryptoAmount = "10", expectedTotal = "16500.00", idempotencyKey = randomUUID(), address = TRON_ADDRESS, userId = h.userId } = {}) =>
-        createCryptoPurchase({ userId, assetId: h.assetId, address, memo: null, cryptoAmount, nairaTotal: null, expectedTotal, idempotencyKey, pin: "4827", ipAddress: null, userAgent: null });
+        createCryptoPurchase({ userId, assetId: h.assetId, address, memo: null, cryptoAmount, nairaTotal: null, expectedTotal, expectedCryptoAmount: null, idempotencyKey, pin: "4827", ipAddress: null, userAgent: null });
 
     const row = (id: string) => db.selectFrom("crypto_purchases").select(["status", "provider", "providerReference", "txHash", "totalNaira", "failureReason"]).where("id", "=", id).executeTakeFirstOrThrow();
 

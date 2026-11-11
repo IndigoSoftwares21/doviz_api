@@ -5,6 +5,7 @@ import fetchCryptoPurchase from "@/actions/cryptoPurchase/fetchCryptoPurchase";
 import fetchCryptoBuyQuote, { CryptoBuyLimits } from "@/actions/cryptoBuyQuote/fetchCryptoBuyQuote";
 import isInsufficientBalanceError from "@/utils/ledger/isInsufficientBalanceError";
 import isValidCryptoAddress from "@/utils/cryptoPurchases/isValidCryptoAddress";
+import isFreshQuoteAcceptable from "@/utils/cryptoPurchases/isFreshQuoteAcceptable";
 import selectCryptoPurchaseIdByIdempotencyKey from "./queries/selectCryptoPurchaseIdByIdempotencyKey";
 import checkCryptoStock from "./utils/checkCryptoStock";
 import holdCryptoPurchase from "./utils/holdCryptoPurchase";
@@ -22,8 +23,10 @@ interface ICreateCryptoPurchase {
     cryptoAmount: string | null;
     /** … or the naira to spend in total. */
     nairaTotal: string | null;
-    /** The total the user confirmed. A different one now → they re-confirm. */
+    /** The total the user confirmed. Never charged more than this. */
     expectedTotal: string;
+    /** The coin the user saw; lets a moving price go ahead within tolerance (isFreshQuoteAcceptable). */
+    expectedCryptoAmount: string | null;
     idempotencyKey: string;
     pin: string;
     ipAddress: string | null;
@@ -32,7 +35,8 @@ interface ICreateCryptoPurchase {
 
 /**
  * Buys crypto for the user's own address: PIN → replay → re-quote with the
- * ACTIVE provider and our current rate (changed → quote_changed, nothing held)
+ * ACTIVE provider and our current price (worse for the user than confirmed →
+ * quote_changed, nothing held; see isFreshQuoteAcceptable)
  * → address check → stock check (skipped if the provider can't report one) →
  * hold + record (holdCryptoPurchase) → send (sendCryptoPurchase) → return it.
  * The same idempotency key returns the original.
@@ -56,7 +60,8 @@ const createCryptoPurchase = async (input: ICreateCryptoPurchase) => {
     if (!quote) return result({ failure: failure ?? undefined, limits });
     const { provider, ...priced } = quote;
     const summary = { cryptoAmount: priced.cryptoAmount, networkFee: priced.networkFee, unitPrice: priced.unitPrice, nairaAmount: priced.nairaAmount, nairaFee: priced.nairaFee, total: priced.total };
-    if (!new Decimal(input.expectedTotal).equals(quote.total)) return result({ failure: ACTION_FAILURE.QUOTE_CHANGED, quote: summary });
+    const acceptable = isFreshQuoteAcceptable({ expectedTotal: input.expectedTotal, expectedCryptoAmount: input.expectedCryptoAmount, fresh: quote });
+    if (!acceptable) return result({ failure: ACTION_FAILURE.QUOTE_CHANGED, quote: summary });
 
     const address = input.address.trim();
     const memo = input.memo?.trim() || null;

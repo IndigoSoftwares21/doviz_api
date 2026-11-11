@@ -2,7 +2,7 @@ import { z } from "zod";
 import isNairaAmount from "@/utils/money/isNairaAmount";
 
 /** A positive coin amount, at most 18 decimals. */
-const isCryptoAmount = (value: string) => /^(?:0|[1-9]\d{0,19})(?:\.\d{1,18})?$/.test(value) && Number(value) > 0;
+export const isCryptoAmount = (value: string) => /^(?:0|[1-9]\d{0,19})(?:\.\d{1,18})?$/.test(value) && Number(value) > 0;
 
 // Exactly one of: the coin to receive, or the naira to spend in total.
 const getCryptoBuyQuoteSchema = z

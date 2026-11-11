@@ -8,7 +8,7 @@ const KUCOIN = {
     /** KuCoin's success code in its { code, data } envelope. */
     SUCCESS_CODE: "200000",
     /** Coins we ask KuCoin about in listSendableAssets. */
-    SEND_CURRENCIES: ["USDT"],
+    SEND_CURRENCIES: ["USDT", "USDC", "ETH"],
     /**
      * UNVERIFIED until the first real ~$1 send (NAIRA_TO_CRYPTO_PLAN.md §11).
      * false: KuCoin takes its fee from our balance on top, so the recipient
@@ -18,6 +18,8 @@ const KUCOIN = {
     FEE_INCLUDED_IN_AMOUNT: false,
     /** How many recent withdrawals getSend searches for our remark when it has no KuCoin id. */
     HISTORY_PAGE_SIZE: 100,
+    /** Public best bid/ask for a pair (e.g. ETH-USDT): what buying the coin costs us. */
+    PRICE_PATH: "/api/v1/market/orderbook/level1",
 } as const;
 
 export const KUCOIN_ACCOUNT_MODE = {

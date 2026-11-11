@@ -22,7 +22,35 @@ const CRYPTO_PURCHASES = {
     MAX_RATE_CHANGE_PERCENT: 5,
     /** Provider catalog terms (fee, minimum) are cached this long. */
     SEND_TERMS_CACHE_MS: 5 * 60 * 1000,
+    /** The coin every market price is in, and whose naira rate we set by hand. */
+    BASE_SYMBOL: "USDT",
+    /** A provider's live coin price (e.g. ETH in USDT) is reused this long. */
+    MARKET_PRICE_CACHE_MS: 15 * 1000,
+    /** A live price more than this % from the one we used under a minute ago is refused (bad tick / outage). */
+    MARKET_PRICE_MAX_JUMP_PERCENT: 10,
+    MARKET_PRICE_JUMP_WINDOW_MS: 60 * 1000,
+    /** A market-priced quote is good for this long (it's re-priced on confirm anyway). */
+    MARKET_QUOTE_TTL_MS: 60 * 1000,
+    /** Markup for a market-priced coin with no row in crypto_buy_markups. */
+    DEFAULT_BUY_MARKUP_PERCENT: "1.5",
+    /** set-buy-markup refuses more than this (matches the DB check). */
+    MAX_BUY_MARKUP_PERCENT: 20,
+    /**
+     * On confirm, a fresh price may give the user up to this % LESS coin than
+     * they saw (prices move between quote and PIN); more than that → 409.
+     */
+    RECEIVE_TOLERANCE_PERCENT: "0.5",
 } as const;
+
+/** How a purchase was priced (crypto_purchases.price_source). */
+export const CRYPTO_PRICE_SOURCE = {
+    /** A naira rate we set for this coin (crypto_buy_rates). */
+    RATE: "rate",
+    /** Our USDT rate × the provider's live price × (1 + markup). */
+    MARKET: "market",
+} as const;
+
+export type CryptoPriceSource = (typeof CRYPTO_PRICE_SOURCE)[keyof typeof CRYPTO_PRICE_SOURCE];
 
 /**
  * pending      — money held; sent (or about to be sent) to the provider

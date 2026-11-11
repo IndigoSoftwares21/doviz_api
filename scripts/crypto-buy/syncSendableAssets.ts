@@ -1,6 +1,6 @@
 import { db } from "../../src/database";
 import { CryptoSendProvider } from "../../src/services/cryptoSends/cryptoSendProvider";
-import { BUYABLE_ASSETS, PROVIDER_NETWORK_ALIASES } from "./buyableAssets";
+import { BUYABLE_ASSETS, ourNetwork } from "./buyableAssets";
 
 /**
  * Upserts our buyable coins, then maps the provider's sendable assets onto
@@ -10,9 +10,9 @@ import { BUYABLE_ASSETS, PROVIDER_NETWORK_ALIASES } from "./buyableAssets";
  * Unmatched / ambiguous provider assets are logged and skipped.
  */
 const syncSendableAssets = async ({ provider, enable = false }: { provider: CryptoSendProvider; enable?: boolean }) => {
-    const aliases = PROVIDER_NETWORK_ALIASES[provider.name] ?? {};
     const sendable = await provider.listSendableAssets();
-    const ours = (network: string) => aliases[network] ?? null;
+    const ours = (candidate: { symbol: string; providerNetwork: string }) =>
+        ourNetwork({ provider: provider.name, symbol: candidate.symbol, providerNetwork: candidate.providerNetwork });
 
     for (const asset of BUYABLE_ASSETS) {
         const row = await db
@@ -22,7 +22,7 @@ const syncSendableAssets = async ({ provider, enable = false }: { provider: Cryp
             .returning(["id", "isBuyEnabled"])
             .executeTakeFirstOrThrow();
 
-        const matches = sendable.filter((candidate) => candidate.symbol === asset.symbol && ours(candidate.providerNetwork) === asset.network);
+        const matches = sendable.filter((candidate) => candidate.symbol === asset.symbol && ours(candidate) === asset.network);
         if (matches.length !== 1) {
             console.warn(`  ✗ ${asset.symbol}/${asset.network}: ${matches.length} ${provider.name} matches — skipped`);
             continue;
@@ -40,7 +40,7 @@ const syncSendableAssets = async ({ provider, enable = false }: { provider: Cryp
         console.log(`  ✓ ${asset.symbol}/${asset.network} → ${match.providerAssetId}: fee ${match.terms.fee}, min ${match.terms.minAmount}${paused}${off}`);
     }
 
-    const unmapped = sendable.filter((candidate) => !ours(candidate.providerNetwork));
+    const unmapped = sendable.filter((candidate) => !ours(candidate));
     if (unmapped.length) console.log(`  (no alias for ${unmapped.map((a) => a.providerAssetId).join(", ")} — add to PROVIDER_NETWORK_ALIASES to use)`);
 };
 
