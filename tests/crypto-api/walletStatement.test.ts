@@ -5,6 +5,7 @@ import selectStatementEntry from "@/actions/walletTransaction/fetchWalletTransac
 import selectUserStatementEntry from "@/schemaHelpers/selectUserStatementEntry";
 import encodeStatementCursor from "@/utils/wallet/encodeStatementCursor";
 import { LEDGER_TRANSACTION_TYPE } from "@/constants/ledger";
+import { BILL_CATEGORY } from "@/constants/bills";
 import { useFakeProvider } from "./fakeProvider";
 import { authHeader, createTestApp } from "./testApp";
 
@@ -22,6 +23,12 @@ const entry = (id: string) => ({
     id, amount: "156000.00", balanceAfter: "156000.00", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT,
     depositId: "dep-1", symbol: "USDT", network: "TRC20", cryptoAmount: "100.000000",
     grossNgn: "157560.00", markupNgn: "1560.00", markupPercent: "1.00",
+    billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null,
+});
+const billEntry = (id: string) => ({
+    ...entry(id), amount: "-1000.00", type: LEDGER_TRANSACTION_TYPE.BILL_HOLD,
+    depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null,
+    billPaymentId: "bill-1", billCategory: BILL_CATEGORY.DATA, billerName: "MTN", billProductName: "1.5GB - 30 days", billCustomerId: "08031234567",
 });
 
 describe("wallet statement routes", () => {
@@ -38,6 +45,17 @@ describe("wallet statement routes", () => {
         expect(response.body.data.items).toHaveLength(2);
         expect(response.body.data.nextCursor).toBe(encodeStatementCursor({ entryId: "e-2" }));
         expect(response.body.data.items[0]).toMatchObject({ direction: "credit", amount: "156000.00", deposit: { cryptoAmount: "100" } });
+    });
+
+    it("says what kind of bill a line was, with the biller and plan", async () => {
+        jest.mocked(selectStatementEntries).mockResolvedValue([billEntry("e-1")]);
+        const response = await get("/transactions");
+        expect(response.body.data.items[0]).toMatchObject({
+            direction: "debit",
+            description: "Data purchase",
+            deposit: null,
+            bill: { id: "bill-1", category: "data", billerName: "MTN", productName: "1.5GB - 30 days", customerId: "08031234567" },
+        });
     });
 
     it("decodes the cursor and ends with nextCursor null", async () => {

@@ -28,6 +28,7 @@ const fetchWalletTransaction = async ({ userId, entryId }: { userId: string; ent
             detectedAt: row.detectedAt,
             completedAt: row.completedAt,
         },
+        bill: item.bill,
     };
 
     return { data };

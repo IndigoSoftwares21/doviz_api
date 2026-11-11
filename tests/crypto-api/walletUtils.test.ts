@@ -1,3 +1,4 @@
+import { BILL_CATEGORY } from "@/constants/bills";
 import encodeStatementCursor from "@/utils/wallet/encodeStatementCursor";
 import decodeStatementCursor from "@/utils/wallet/decodeStatementCursor";
 import describeStatementEntry from "@/utils/wallet/describeStatementEntry";
@@ -6,7 +7,7 @@ import { ENTRY_DIRECTION, LEDGER_TRANSACTION_TYPE } from "@/constants/ledger";
 
 const ENTRY = "6f1c2a4e-8b3d-4c5e-9f7a-1b2c3d4e5f60";
 const row = { id: ENTRY, amount: "-5000.5", balanceAfter: "100", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.WITHDRAWAL_HOLD,
-    depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null };
+    depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null, billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null };
 
 describe("statement cursor", () => {
     it("round-trips an entry id", () => {
@@ -22,7 +23,7 @@ describe("toStatementItem", () => {
     it("shows debits as a positive amount with direction debit, to the kobo", () => {
         expect(toStatementItem({ row })).toMatchObject({
             direction: ENTRY_DIRECTION.DEBIT, amount: "5000.50", balanceAfter: "100.00", deposit: null,
-            description: "Withdrawal to bank",
+            description: "Withdrawal to bank", bill: null,
         });
     });
 });
@@ -43,6 +44,17 @@ describe("describeStatementEntry", () => {
             .toBe("Bill payment");
         expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.BILL_REVERSAL, symbol: null, cryptoAmount: null }))
             .toBe("Bill payment refunded");
+    });
+
+    it("names the kind of bill when the category is known", () => {
+        const bill = (type: string, billCategory: string) => describeStatementEntry({ type, symbol: null, cryptoAmount: null, billCategory });
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_HOLD, BILL_CATEGORY.AIRTIME)).toBe("Airtime purchase");
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_HOLD, BILL_CATEGORY.DATA)).toBe("Data purchase");
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_HOLD, BILL_CATEGORY.ELECTRICITY)).toBe("Electricity bill");
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_HOLD, BILL_CATEGORY.CABLE_TV)).toBe("Cable TV subscription");
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_REVERSAL, BILL_CATEGORY.DATA)).toBe("Data refund");
+        // An unknown category falls back to the generic wording.
+        expect(bill(LEDGER_TRANSACTION_TYPE.BILL_HOLD, "gift_cards")).toBe("Bill payment");
     });
 
     it("labels crypto purchases and their refunds", () => {
