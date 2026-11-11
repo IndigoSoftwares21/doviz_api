@@ -30,3 +30,32 @@ export const ENTRY_DIRECTION = {
 } as const;
 
 export type EntryDirection = (typeof ENTRY_DIRECTION)[keyof typeof ENTRY_DIRECTION];
+
+/**
+ * Statement filter "type" → the ledger transaction types it covers. Refunds
+ * and fee adjustments sit with the thing they belong to, so filtering by
+ * bills also shows a refunded bill.
+ */
+export const STATEMENT_TYPE_FILTER = {
+    CRYPTO: "crypto",
+    BANK_TRANSFER: "bank_transfer",
+    WITHDRAWAL: "withdrawal",
+    BILL: "bill",
+} as const;
+
+export type StatementTypeFilter = (typeof STATEMENT_TYPE_FILTER)[keyof typeof STATEMENT_TYPE_FILTER];
+
+export const STATEMENT_TYPE_LEDGER_TYPES: Record<StatementTypeFilter, LedgerTransactionType[]> = {
+    [STATEMENT_TYPE_FILTER.CRYPTO]: [LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT],
+    [STATEMENT_TYPE_FILTER.BANK_TRANSFER]: [LEDGER_TRANSACTION_TYPE.NAIRA_DEPOSIT],
+    [STATEMENT_TYPE_FILTER.WITHDRAWAL]: [
+        LEDGER_TRANSACTION_TYPE.WITHDRAWAL_HOLD,
+        LEDGER_TRANSACTION_TYPE.WITHDRAWAL_SETTLE,
+        LEDGER_TRANSACTION_TYPE.WITHDRAWAL_REVERSAL,
+    ],
+    [STATEMENT_TYPE_FILTER.BILL]: [
+        LEDGER_TRANSACTION_TYPE.BILL_HOLD,
+        LEDGER_TRANSACTION_TYPE.BILL_SETTLE,
+        LEDGER_TRANSACTION_TYPE.BILL_REVERSAL,
+    ],
+};
