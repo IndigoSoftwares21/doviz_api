@@ -1,6 +1,7 @@
 import jsonContent from "@/docs/utils/jsonContent";
 import dataEnvelope from "@/docs/utils/dataEnvelope";
 import { statementItem, statementDetail } from "./walletSchemas";
+import { ENTRY_DIRECTION, STATEMENT_TYPE_FILTER } from "@/constants/ledger";
 
 const auth = [{ BearerAuth: [] }];
 const ref = (name: string) => ({ $ref: `#/components/responses/${name}` });
@@ -20,9 +21,9 @@ const statementPaths = {
             parameters: [
                 { name: "cursor", in: "query", schema: { type: "string" }, description: "Opaque; from `nextCursor`." },
                 { name: "size", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } },
-                { name: "direction", in: "query", schema: { type: "string", enum: ["credit", "debit"] }, description: "Money in or money out." },
+                { name: "direction", in: "query", schema: { type: "string", enum: Object.values(ENTRY_DIRECTION) }, description: "Money in or money out." },
                 {
-                    name: "type", in: "query", schema: { type: "string", enum: ["crypto", "bank_transfer", "withdrawal", "bill"] },
+                    name: "type", in: "query", schema: { type: "string", enum: Object.values(STATEMENT_TYPE_FILTER) },
                     description: "What caused the line.",
                 },
                 {
