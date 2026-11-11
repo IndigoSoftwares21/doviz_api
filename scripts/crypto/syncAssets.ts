@@ -14,7 +14,7 @@ const syncAssets = async ({ provider, environment }: { provider: CryptoProvider;
     for (const asset of SUPPORTED_ASSETS) {
         const row = await db
             .insertInto("crypto_assets")
-            .values({ ...asset, isEnabled: true })
+            .values({ ...asset, isEnabled: true, isBuyEnabled: false })
             .onConflict((oc) => oc.columns(["symbol", "network"]).doUpdateSet({ name: asset.name, decimals: asset.decimals, updatedAt: new Date() }))
             .returning(["id"])
             .executeTakeFirstOrThrow();
@@ -36,7 +36,7 @@ const syncAssets = async ({ provider, environment }: { provider: CryptoProvider;
         };
         await db
             .insertInto("crypto_provider_assets")
-            .values({ assetId: row.id, provider: provider.name, environment, isEnabled: true, ...mapping })
+            .values({ assetId: row.id, provider: provider.name, environment, isEnabled: true, canSend: false, memoRequired: false, ...mapping })
             .onConflict((oc) => oc.columns(["provider", "environment", "assetId"]).doUpdateSet(mapping))
             .execute();
         console.log(`  ✓ ${asset.symbol}/${asset.network} → ${match.providerCode}`);

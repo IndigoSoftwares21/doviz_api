@@ -7,6 +7,8 @@ export const LEDGER_ACCOUNT_KIND = {
     BILLS_IN_TRANSIT: "bills_in_transit",
     BILL_REVENUE: "bill_revenue",
     PROVIDER_FEES: "provider_fees",
+    CRYPTO_SENDS_IN_TRANSIT: "crypto_sends_in_transit",
+    CRYPTO_SALES: "crypto_sales",
 } as const;
 
 export const LEDGER_TRANSACTION_TYPE = {
@@ -18,6 +20,9 @@ export const LEDGER_TRANSACTION_TYPE = {
     BILL_SETTLE: "bill_settle",
     BILL_REVERSAL: "bill_reversal",
     NAIRA_DEPOSIT: "naira_deposit",
+    CRYPTO_PURCHASE_HOLD: "crypto_purchase_hold",
+    CRYPTO_PURCHASE_SETTLE: "crypto_purchase_settle",
+    CRYPTO_PURCHASE_REVERSAL: "crypto_purchase_reversal",
 } as const;
 
 export type LedgerAccountKind = (typeof LEDGER_ACCOUNT_KIND)[keyof typeof LEDGER_ACCOUNT_KIND];

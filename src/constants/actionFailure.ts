@@ -17,6 +17,10 @@ const ACTION_FAILURE = {
     AMOUNT_OUT_OF_RANGE: "amount_out_of_range",
     BANK_UNSUPPORTED: "bank_unsupported",
     QUOTE_CHANGED: "quote_changed",
+    RATE_UNAVAILABLE: "rate_unavailable",
+    ASSET_UNAVAILABLE: "asset_unavailable",
+    INVALID_ADDRESS: "invalid_address",
+    STOCK_UNAVAILABLE: "stock_unavailable",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

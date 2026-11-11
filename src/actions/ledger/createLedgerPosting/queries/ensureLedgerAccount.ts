@@ -9,10 +9,11 @@ export type LedgerAccountRef =
               | typeof LEDGER_ACCOUNT_KIND.PROVIDER_CLEARING
               | typeof LEDGER_ACCOUNT_KIND.PAYOUTS_IN_TRANSIT
               | typeof LEDGER_ACCOUNT_KIND.BILLS_IN_TRANSIT
-              | typeof LEDGER_ACCOUNT_KIND.PROVIDER_FEES;
+              | typeof LEDGER_ACCOUNT_KIND.PROVIDER_FEES
+              | typeof LEDGER_ACCOUNT_KIND.CRYPTO_SENDS_IN_TRANSIT;
           provider: string;
       }
-    | { kind: typeof LEDGER_ACCOUNT_KIND.MARKUP_REVENUE | typeof LEDGER_ACCOUNT_KIND.BILL_REVENUE };
+    | { kind: typeof LEDGER_ACCOUNT_KIND.MARKUP_REVENUE | typeof LEDGER_ACCOUNT_KIND.BILL_REVENUE | typeof LEDGER_ACCOUNT_KIND.CRYPTO_SALES };
 
 /** Finds the account, creating it on first use (race-safe via ON CONFLICT). */
 const ensureLedgerAccount = async ({

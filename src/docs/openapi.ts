@@ -2,6 +2,7 @@ import AUTH from "@/constants/auth";
 import successEnvelope from "@/docs/utils/successEnvelope";
 import cryptoTags from "@/docs/paths/cryptoTags";
 import cryptoPaths from "@/docs/paths/cryptoPaths";
+import cryptoBuyPaths from "@/docs/paths/cryptoBuy";
 import walletPaths from "@/docs/paths/wallet";
 import bankPaths from "@/docs/paths/bankPaths";
 import billPaths, { billTags } from "@/docs/paths/billPaths";
@@ -405,6 +406,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
     },
     paths: {
         ...cryptoPaths,
+        ...cryptoBuyPaths,
         ...walletPaths,
         ...bankPaths,
         ...billPaths,

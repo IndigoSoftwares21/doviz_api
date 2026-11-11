@@ -19,6 +19,7 @@ const WITHDRAWALS = {
 /** The service names in provider_settings. */
 export const PROVIDER_SERVICE = {
     PAYOUTS: "payouts",
+    CRYPTO_SENDS: "crypto_sends",
 } as const;
 
 /**

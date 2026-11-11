@@ -28,6 +28,10 @@ const describeStatementEntry = ({
             return "Bill payment refunded";
         case LEDGER_TRANSACTION_TYPE.NAIRA_DEPOSIT:
             return "Bank transfer deposit";
+        case LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_HOLD:
+            return "Crypto purchase";
+        case LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_REVERSAL:
+            return "Crypto purchase refunded";
         default:
             return "Wallet adjustment";
     }

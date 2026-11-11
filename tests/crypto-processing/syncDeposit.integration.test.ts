@@ -22,11 +22,11 @@ run("syncDeposit against Postgres", () => {
         const user = await db.insertInto("users").values({ phoneNumber: `+23480${Date.now().toString().slice(-8)}`, status: "active" } as never)
             .returning(["id"]).executeTakeFirstOrThrow();
         userId = user.id;
-        const asset = await db.insertInto("crypto_assets").values({ symbol: `T${tag}`, network: "TRC20", name: "Test", decimals: 6, isEnabled: true })
+        const asset = await db.insertInto("crypto_assets").values({ symbol: `T${tag}`, network: "TRC20", name: "Test", decimals: 6, isEnabled: true, isBuyEnabled: false })
             .returning(["id"]).executeTakeFirstOrThrow();
         await db.insertInto("crypto_provider_assets").values({
             assetId: asset.id, provider: "fakepay", environment: "sandbox", providerAssetId: `id-${tag}`, providerCode,
-            minDeposit: null, confirmations: 1, isEnabled: true, syncedAt: null,
+            minDeposit: null, confirmations: 1, isEnabled: true, syncedAt: null, canSend: false, memoRequired: false,
         }).execute();
         await db.insertInto("conversion_markups").values({ assetId: asset.id, currency: "NGN", markupPercent: "2.5", note: null }).execute();
         await db.insertInto("crypto_wallets").values({

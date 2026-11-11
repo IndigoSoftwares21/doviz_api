@@ -44,4 +44,11 @@ describe("describeStatementEntry", () => {
         expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.BILL_REVERSAL, symbol: null, cryptoAmount: null }))
             .toBe("Bill payment refunded");
     });
+
+    it("labels crypto purchases and their refunds", () => {
+        expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_HOLD, symbol: null, cryptoAmount: null }))
+            .toBe("Crypto purchase");
+        expect(describeStatementEntry({ type: LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_REVERSAL, symbol: null, cryptoAmount: null }))
+            .toBe("Crypto purchase refunded");
+    });
 });

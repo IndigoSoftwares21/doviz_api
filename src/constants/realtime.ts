@@ -21,6 +21,8 @@ export const REALTIME_EVENT = {
     NAIRA_DEPOSIT_UPDATED: "naira_deposit.updated",
     /** { withdrawalId, status } — a withdrawal to the user's bank completed or failed (refunded). */
     WITHDRAWAL_UPDATED: "withdrawal.updated",
+    /** { cryptoPurchaseId, status } — a crypto purchase was sent, failed (refunded) or needs review. */
+    CRYPTO_PURCHASE_UPDATED: "crypto_purchase.updated",
     /** {} — the naira balance changed (payment held, refund, deposit credited). */
     WALLET_BALANCE_CHANGED: "wallet.balance_changed",
 } as const;

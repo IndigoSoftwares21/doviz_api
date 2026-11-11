@@ -9,6 +9,7 @@ import registerCryptoProviders from "@/services/crypto/providers";
 import registerBillProviders from "@/services/bills/providers";
 import registerCollectionProviders from "@/services/collections/providers";
 import registerPayoutProviders from "@/services/payouts/providers";
+import registerCryptoSendProviders from "@/services/cryptoSends/providers";
 import startJobs from "@/jobs/startJobs";
 import startRealtime from "@/services/realtime/startRealtime";
 
@@ -73,6 +74,7 @@ class App {
         registerBillProviders();
         registerCollectionProviders();
         registerPayoutProviders();
+        registerCryptoSendProviders();
         
         const apiVersion = process.env.API_VERSION || 'v1';
         

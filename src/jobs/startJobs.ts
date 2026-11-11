@@ -5,6 +5,7 @@ import reconcileDeposits from "./reconcileDeposits";
 import reconcileBillPayments from "./reconcileBillPayments";
 import reconcileNairaDeposits from "./reconcileNairaDeposits";
 import reconcileWithdrawals from "./reconcileWithdrawals";
+import reconcileCryptoPurchases from "./reconcileCryptoPurchases";
 
 const JOBS = [
     { name: "sweep-webhook-events", lockKey: 7301001, intervalMs: 60_000, run: sweepWebhookEvents },
@@ -12,6 +13,7 @@ const JOBS = [
     { name: "reconcile-bill-payments", lockKey: 7301003, intervalMs: 2 * 60_000, run: reconcileBillPayments },
     { name: "reconcile-naira-deposits", lockKey: 7301004, intervalMs: 2 * 60_000, run: reconcileNairaDeposits },
     { name: "reconcile-withdrawals", lockKey: 7301005, intervalMs: 2 * 60_000, run: reconcileWithdrawals },
+    { name: "reconcile-crypto-purchases", lockKey: 7301006, intervalMs: 2 * 60_000, run: reconcileCryptoPurchases },
 ];
 
 /**

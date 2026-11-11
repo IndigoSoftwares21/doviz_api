@@ -202,6 +202,20 @@ export interface Database {
     isEnabled: ColumnType<boolean>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    isBuyEnabled: ColumnType<boolean>;
+  };
+
+  crypto_buy_rates: {
+    id: Generated<string>;
+    symbol: ColumnType<string>;
+    currency: ColumnType<string>;
+    rate: ColumnType<string>;
+    markupPercent: ColumnType<string>;
+    effectiveFrom: Generated<Date>;
+    expiresAt: ColumnType<Date>;
+    setBy: ColumnType<string>;
+    note: ColumnType<string | null>;
+    createdAt: Generated<Date>;
   };
 
   crypto_deposits: {
@@ -246,6 +260,55 @@ export interface Database {
     syncedAt: ColumnType<Date | null>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    canSend: ColumnType<boolean>;
+    minSend: ColumnType<string | null>;
+    sendFee: ColumnType<string | null>;
+    sendPrecision: ColumnType<number | null>;
+    memoRequired: ColumnType<boolean>;
+  };
+
+  crypto_purchases: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    assetId: ColumnType<string>;
+    provider: ColumnType<string>;
+    environment: ColumnType<string>;
+    providerAssetId: ColumnType<string>;
+    providerReference: ColumnType<string | null>;
+    idempotencyKey: ColumnType<string>;
+    address: ColumnType<string>;
+    memo: ColumnType<string | null>;
+    cryptoAmount: ColumnType<string>;
+    networkFee: ColumnType<string>;
+    providerFeeCharged: ColumnType<string | null>;
+    rateId: ColumnType<string>;
+    unitPrice: ColumnType<string>;
+    currency: ColumnType<string>;
+    nairaAmount: ColumnType<string>;
+    nairaFee: ColumnType<string>;
+    totalNaira: ColumnType<string>;
+    status: ColumnType<string>;
+    failureReason: ColumnType<string | null>;
+    txHash: ColumnType<string | null>;
+    holdLedgerTransactionId: ColumnType<string>;
+    finalLedgerTransactionId: ColumnType<string | null>;
+    requestedAt: Generated<Date>;
+    finalizedAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  crypto_stock_movements: {
+    id: Generated<string>;
+    provider: ColumnType<string>;
+    symbol: ColumnType<string>;
+    kind: ColumnType<string>;
+    quantity: ColumnType<string>;
+    nairaCost: ColumnType<string | null>;
+    purchaseId: ColumnType<string | null>;
+    note: ColumnType<string | null>;
+    recordedBy: ColumnType<string>;
+    createdAt: Generated<Date>;
   };
 
   crypto_wallets: {
