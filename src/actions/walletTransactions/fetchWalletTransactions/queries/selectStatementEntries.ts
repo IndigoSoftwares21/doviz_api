@@ -1,4 +1,4 @@
-import { sql } from "kysely";
+import { Expression, SqlBool, sql } from "kysely";
 import { db } from "@/database";
 import { ENTRY_DIRECTION, LEDGER_ACCOUNT_KIND, STATEMENT_TYPE_LEDGER_TYPES } from "@/constants/ledger";
 import { StatementFilters } from "@/types/statementFilters";
@@ -11,6 +11,8 @@ import { StatementFilters } from "@/types/statementFilters";
  * Filters only add WHERE clauses, so paging works the same within them.
  * Direction comes from the entry's own sign (the rule toStatementItem uses),
  * so "money in" always matches the "+" rows. `from` inclusive, `to` exclusive.
+ * `search` matches any of: biller, coin, amount, reference, customer number,
+ * or the kind of transaction its words mean (see buildStatementSearch).
  */
 const selectStatementEntries = async ({
     userId,
@@ -68,6 +70,22 @@ const selectStatementEntries = async ({
     if (filters.type) query = query.where("ledger_transactions.type", "in", STATEMENT_TYPE_LEDGER_TYPES[filters.type]);
     if (filters.from) query = query.where("ledger_entries.createdAt", ">=", filters.from);
     if (filters.to) query = query.where("ledger_entries.createdAt", "<", filters.to);
+
+    const { search } = filters;
+    if (search) {
+        query = query.where((eb) => {
+            const matches: Expression<SqlBool>[] = [
+                eb("billers.name", "ilike", search.contains),
+                eb("crypto_assets.symbol", "ilike", search.prefix),
+            ];
+            if (search.amount) matches.push(sql<SqlBool>`abs(${eb.ref("ledger_entries.amount")}) = ${search.amount}::numeric`);
+            if (search.referencePrefix) matches.push(sql<SqlBool>`${eb.ref("ledger_entries.id")}::text ilike ${search.referencePrefix}`);
+            if (search.customerContains) matches.push(eb("bill_payments.customerId", "like", search.customerContains));
+            if (search.ledgerTypes.length) matches.push(eb("ledger_transactions.type", "in", search.ledgerTypes));
+            if (search.billCategories.length) matches.push(eb("billers.categoryCode", "in", search.billCategories));
+            return eb.or(matches);
+        });
+    }
 
     if (afterEntryId) {
         query = query.where(

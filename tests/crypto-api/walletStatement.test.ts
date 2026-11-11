@@ -18,7 +18,7 @@ jest.mock("@/schemaHelpers/selectUserStatementEntry");
 const app = createTestApp();
 const get = (path: string) => request(app).get(`/api/v1/app/wallet${path}`).set("Authorization", authHeader());
 const ENTRY = "6f1c2a4e-8b3d-4c5e-9f7a-1b2c3d4e5f60";
-const NO_FILTERS = { direction: null, type: null, from: null, to: null };
+const NO_FILTERS = { direction: null, type: null, from: null, to: null, search: null };
 const entry = (id: string) => ({
     id, amount: "156000.00", balanceAfter: "156000.00", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT,
     depositId: "dep-1", symbol: "USDT", network: "TRC20", cryptoAmount: "100.000000",
@@ -78,7 +78,7 @@ describe("wallet statement routes", () => {
             userId: "user-1",
             afterEntryId: ENTRY,
             limit: 21,
-            filters: { direction: "debit", type: "bill", from: new Date(from), to: new Date(to) },
+            filters: { direction: "debit", type: "bill", from: new Date(from), to: new Date(to), search: null },
         });
     });
 
@@ -91,6 +91,20 @@ describe("wallet statement routes", () => {
         `from=${encodeURIComponent("2026-11-01T00:00:00+01:00")}&to=${encodeURIComponent("2026-11-01T00:00:00+01:00")}`,
         `from=${encodeURIComponent("2024-01-01T00:00:00+01:00")}&to=${encodeURIComponent("2026-01-01T00:00:00+01:00")}`,
     ])("rejects filter %s", async (query) => {
+        const response = await get(`/transactions?${query}`);
+        expect(response.status).toBe(400);
+        expect(selectStatementEntries).not.toHaveBeenCalled();
+    });
+
+    it("turns q into a search the query can match", async () => {
+        jest.mocked(selectStatementEntries).mockResolvedValue([]);
+        const response = await get(`/transactions?q=${encodeURIComponent("  airtime  ")}`);
+        expect(response.status).toBe(200);
+        const { search } = jest.mocked(selectStatementEntries).mock.calls[0][0].filters;
+        expect(search).toMatchObject({ contains: "%airtime%", billCategories: ["airtime"] });
+    });
+
+    it.each(["q=a", `q=${"x".repeat(51)}`])("rejects search %s", async (query) => {
         const response = await get(`/transactions?${query}`);
         expect(response.status).toBe(400);
         expect(selectStatementEntries).not.toHaveBeenCalled();

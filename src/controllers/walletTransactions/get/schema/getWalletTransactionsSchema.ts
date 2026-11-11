@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ENTRY_DIRECTION, STATEMENT_TYPE_FILTER } from "@/constants/ledger";
 import decodeStatementCursor from "@/utils/wallet/decodeStatementCursor";
+import buildStatementSearch from "@/utils/wallet/buildStatementSearch";
+import { STATEMENT_SEARCH } from "@/constants/statementSearch";
 
 const toInt = (value: unknown) => (value === undefined || value === "" ? undefined : Number(value));
 
@@ -49,6 +51,13 @@ const getWalletTransactionsSchema = z
             .optional(),
         from: instant,
         to: instant,
+        q: z
+            .string()
+            .trim()
+            .min(STATEMENT_SEARCH.MIN_LENGTH, `Search needs at least ${STATEMENT_SEARCH.MIN_LENGTH} characters`)
+            .max(STATEMENT_SEARCH.MAX_LENGTH, `Search can be at most ${STATEMENT_SEARCH.MAX_LENGTH} characters`)
+            .transform((q) => buildStatementSearch({ q }))
+            .optional(),
     })
     .superRefine(({ from, to }, ctx) => {
         if (from && to && from >= to) {
