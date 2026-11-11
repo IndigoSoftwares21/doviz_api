@@ -10,6 +10,7 @@ const TYPES = [
     STATEMENT_TYPE_FILTER.BANK_TRANSFER,
     STATEMENT_TYPE_FILTER.WITHDRAWAL,
     STATEMENT_TYPE_FILTER.BILL,
+    STATEMENT_TYPE_FILTER.TRANSFER,
 ] as const;
 
 /** ISO 8601 with an explicit offset (e.g. 2026-11-01T00:00:00+01:00), so a day boundary means the user's day. */

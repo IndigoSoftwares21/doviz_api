@@ -8,6 +8,7 @@ import bankRoutes from "@/routes/bank.routes";
 import bankAccountRoutes from "@/routes/bankAccount.routes";
 import billRoutes from "@/routes/bill.routes";
 import nairaDepositRoutes from "@/routes/nairaDeposit.routes";
+import transferRoutes from "@/routes/transfer.routes";
 
 jest.mock("@/database", () => ({ db: {}, disconnect: jest.fn(), withTransaction: jest.fn() }));
 
@@ -39,6 +40,7 @@ describe("OpenAPI spec coverage", () => {
         ...routesOf(bankAccountRoutes as unknown as { stack: Layer[] }, "/user/bank-accounts").map((route) => route.replace(/\/$/, "")),
         ...routesOf(billRoutes as unknown as { stack: Layer[] }, "/bills"),
         ...routesOf(nairaDepositRoutes as unknown as { stack: Layer[] }, "/naira-deposits").map((route) => route.replace(/\/$/, "")),
+        ...routesOf(transferRoutes as unknown as { stack: Layer[] }, "/transfers").map((route) => route.replace(/\/$/, "")),
     ];
 
     it("documents every registered route, and nothing that doesn't exist", () => {

@@ -348,6 +348,22 @@ export interface Database {
     createdAt: Generated<Date>;
   };
 
+  internal_transfers: {
+    id: Generated<string>;
+    senderId: ColumnType<string>;
+    recipientId: ColumnType<string>;
+    senderTag: ColumnType<string | null>;
+    recipientTag: ColumnType<string>;
+    amount: ColumnType<string>;
+    currency: ColumnType<string>;
+    note: ColumnType<string | null>;
+    idempotencyKey: ColumnType<string>;
+    status: ColumnType<string>;
+    ledgerTransactionId: ColumnType<string>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
   knex_migrations: {
     id: Generated<number>;
     name: ColumnType<string | null>;
@@ -491,6 +507,18 @@ export interface Database {
     pinHash: ColumnType<string>;
     failedAttempts: ColumnType<number>;
     lockedUntil: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
+  transfer_limits: {
+    id: Generated<string>;
+    scope: ColumnType<string>;
+    currency: ColumnType<string>;
+    minAmount: ColumnType<string>;
+    maxPerTransfer: ColumnType<string>;
+    maxPerDay: ColumnType<string>;
+    updatedBy: ColumnType<string>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
   };

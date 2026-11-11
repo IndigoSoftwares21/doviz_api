@@ -32,6 +32,8 @@ const describeStatementEntry = ({
             return "Crypto purchase";
         case LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_REVERSAL:
             return "Crypto purchase refunded";
+        case LEDGER_TRANSACTION_TYPE.INTERNAL_TRANSFER:
+            return "Ziks transfer";
         default:
             return "Wallet adjustment";
     }

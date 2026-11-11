@@ -17,11 +17,15 @@ jest.mock("@/schemaHelpers/selectUserStatementEntry");
 const app = createTestApp();
 const get = (path: string) => request(app).get(`/api/v1/app/wallet${path}`).set("Authorization", authHeader());
 const ENTRY = "6f1c2a4e-8b3d-4c5e-9f7a-1b2c3d4e5f60";
+const noTransfer = {
+    transferId: null, transferSenderTag: null, transferRecipientTag: null, transferNote: null,
+    transferSenderFirstName: null, transferSenderLastName: null, transferRecipientFirstName: null, transferRecipientLastName: null,
+};
 const NO_FILTERS = { direction: null, type: null, from: null, to: null };
 const entry = (id: string) => ({
     id, amount: "156000.00", balanceAfter: "156000.00", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT,
     depositId: "dep-1", symbol: "USDT", network: "TRC20", cryptoAmount: "100.000000",
-    grossNgn: "157560.00", markupNgn: "1560.00", markupPercent: "1.00",
+    grossNgn: "157560.00", markupNgn: "1560.00", markupPercent: "1.00", ...noTransfer,
 });
 
 const noBankTransfer = { nairaDepositId: null, senderName: null, senderBankName: null, senderAccountNumber: null };

@@ -23,6 +23,7 @@ export const LEDGER_TRANSACTION_TYPE = {
     CRYPTO_PURCHASE_HOLD: "crypto_purchase_hold",
     CRYPTO_PURCHASE_SETTLE: "crypto_purchase_settle",
     CRYPTO_PURCHASE_REVERSAL: "crypto_purchase_reversal",
+    INTERNAL_TRANSFER: "internal_transfer",
 } as const;
 
 export type LedgerAccountKind = (typeof LEDGER_ACCOUNT_KIND)[keyof typeof LEDGER_ACCOUNT_KIND];
@@ -46,6 +47,7 @@ export const STATEMENT_TYPE_FILTER = {
     BANK_TRANSFER: "bank_transfer",
     WITHDRAWAL: "withdrawal",
     BILL: "bill",
+    TRANSFER: "transfer",
 } as const;
 
 export type StatementTypeFilter = (typeof STATEMENT_TYPE_FILTER)[keyof typeof STATEMENT_TYPE_FILTER];
@@ -63,4 +65,5 @@ export const STATEMENT_TYPE_LEDGER_TYPES: Record<StatementTypeFilter, LedgerTran
         LEDGER_TRANSACTION_TYPE.BILL_SETTLE,
         LEDGER_TRANSACTION_TYPE.BILL_REVERSAL,
     ],
+    [STATEMENT_TYPE_FILTER.TRANSFER]: [LEDGER_TRANSACTION_TYPE.INTERNAL_TRANSFER],
 };

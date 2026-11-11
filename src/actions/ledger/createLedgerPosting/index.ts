@@ -25,6 +25,11 @@ interface ICreateLedgerPosting {
  * The ONLY way money moves. Entries are signed naira strings that must sum to
  * zero; the database enforces the same (plus no overdrafts, append-only,
  * idempotency) at COMMIT — this check just fails fast with a clear error.
+ *
+ * Entries are applied in a FIXED order (by account id), whatever order the
+ * caller lists them: each one row-locks its account, so two postings touching
+ * the same accounts (A pays B while B pays A) lock them in the same order and
+ * can't deadlock.
  */
 const createLedgerPosting = async ({
     trx,
@@ -42,15 +47,15 @@ const createLedgerPosting = async ({
 
     const transaction = await insertLedgerTransaction({ trx, idempotencyKey, type, description, metadata });
 
+    const resolved = [];
     for (const entry of entries) {
         const account = await ensureLedgerAccount({ trx, account: entry.account, currency });
-        await insertLedgerEntry({
-            trx,
-            transactionId: transaction.id,
-            accountId: account.id,
-            currency,
-            amount: entry.amount,
-        });
+        resolved.push({ accountId: account.id, amount: entry.amount });
+    }
+    resolved.sort((left, right) => (left.accountId < right.accountId ? -1 : left.accountId > right.accountId ? 1 : 0));
+
+    for (const { accountId, amount } of resolved) {
+        await insertLedgerEntry({ trx, transactionId: transaction.id, accountId, currency, amount });
     }
 
     return { data: { transactionId: transaction.id } };

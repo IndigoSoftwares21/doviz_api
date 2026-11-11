@@ -9,6 +9,7 @@ import bankRoutes from "@/routes/bank.routes";
 import bankAccountRoutes from "@/routes/bankAccount.routes";
 import billRoutes from "@/routes/bill.routes";
 import nairaDepositRoutes from "@/routes/nairaDeposit.routes";
+import transferRoutes from "@/routes/transfer.routes";
 
 const router = Router();
 
@@ -31,5 +32,6 @@ router.use("/wallet", walletRoutes);
 router.use("/banks", bankRoutes);
 router.use("/bills", billRoutes);
 router.use("/naira-deposits", nairaDepositRoutes);
+router.use("/transfers", transferRoutes);
 
 export default router;

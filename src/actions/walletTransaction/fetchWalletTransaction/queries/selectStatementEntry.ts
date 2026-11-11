@@ -9,6 +9,9 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
         .innerJoin("ledger_transactions", "ledger_transactions.id", "ledger_entries.transactionId")
         .leftJoin("crypto_deposits", "crypto_deposits.ledgerTransactionId", "ledger_transactions.id")
         .leftJoin("crypto_assets", "crypto_assets.id", "crypto_deposits.assetId")
+        .leftJoin("internal_transfers", "internal_transfers.ledgerTransactionId", "ledger_transactions.id")
+        .leftJoin("users as transfer_sender", "transfer_sender.id", "internal_transfers.senderId")
+        .leftJoin("users as transfer_recipient", "transfer_recipient.id", "internal_transfers.recipientId")
         .leftJoin("naira_deposits", "naira_deposits.ledgerTransactionId", "ledger_transactions.id")
         .select([
             "ledger_entries.id",
@@ -23,6 +26,14 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "crypto_deposits.grossNgn",
             "crypto_deposits.markupNgn",
             "crypto_deposits.markupPercent",
+            "internal_transfers.id as transferId",
+            "internal_transfers.senderTag as transferSenderTag",
+            "internal_transfers.recipientTag as transferRecipientTag",
+            "internal_transfers.note as transferNote",
+            "transfer_sender.firstName as transferSenderFirstName",
+            "transfer_sender.lastName as transferSenderLastName",
+            "transfer_recipient.firstName as transferRecipientFirstName",
+            "transfer_recipient.lastName as transferRecipientLastName",
             "crypto_deposits.rateNgnPerUsd",
             "crypto_deposits.txHash",
             "crypto_deposits.confirmations",

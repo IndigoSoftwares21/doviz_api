@@ -1,3 +1,4 @@
+import { statementTransfer } from "@/docs/paths/transfers/transferSchemas";
 import { LEDGER_TRANSACTION_TYPE, ENTRY_DIRECTION } from "@/constants/ledger";
 import { DEPOSIT_STATUS } from "@/constants/cryptoStatus";
 
@@ -26,6 +27,7 @@ const statementLine = (deposit: Record<string, unknown>) => ({
         description: { type: "string", example: "100 USDT converted to naira" },
         createdAt: dateTime,
         deposit: { type: ["object", "null"], properties: deposit, description: "Set for crypto conversions." },
+        transfer: statementTransfer,
     },
 });
 

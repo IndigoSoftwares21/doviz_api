@@ -9,7 +9,7 @@ Status: **server built (2026-11-11)**. This covers:
 Dev runs on the `fakesend` provider. Next: the mobile Buy screen. KuCoin goes live after the §10 checks and a first ~$1 test send (§11).
 
 ## 1. The product
-A user spends naira from their Doviz balance and receives crypto at **their own
+A user spends naira from their Ziks balance and receives crypto at **their own
 wallet address**. We never hold private keys: a provider (KuCoin first) sends
 the coin from a balance we top up by hand. Selling crypto for naira (Breet) is
 unchanged.

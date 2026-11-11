@@ -21,6 +21,9 @@ const ACTION_FAILURE = {
     ASSET_UNAVAILABLE: "asset_unavailable",
     INVALID_ADDRESS: "invalid_address",
     STOCK_UNAVAILABLE: "stock_unavailable",
+    RECIPIENT_UNAVAILABLE: "recipient_unavailable",
+    TRANSFER_LIMIT: "transfer_limit",
+    ACCOUNT_INACTIVE: "account_inactive",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

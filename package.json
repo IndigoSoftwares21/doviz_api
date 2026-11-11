@@ -35,6 +35,7 @@
     "crypto:set-rate": "ts-node -r tsconfig-paths/register scripts/set-crypto-buy-rate.ts",
     "crypto:record-topup": "ts-node -r tsconfig-paths/register scripts/record-crypto-topup.ts",
     "crypto-purchases:resolve": "ts-node -r tsconfig-paths/register scripts/resolve-crypto-purchase.ts",
+    "transfers:set-limits": "ts-node -r tsconfig-paths/register scripts/set-transfer-limits.ts",
     "sync": "npm run crypto:sync && npm run payouts:sync-banks && npm run bills:sync && npm run crypto-sends:sync",
     "sync:prod": "DOTENV_CONFIG_PATH=.env.production npm run sync"
   },

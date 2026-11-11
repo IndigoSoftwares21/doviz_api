@@ -1,9 +1,9 @@
-# Doviz-to-Doviz transfers by tag: instant and free
+# Ziks-to-Ziks transfers by tag: instant and free
 
-Status: **planned, not built**. Open questions are in §10.
+Status: **API built** (tags, ledger lock order, limits, lookup, send, recent, statement, pushes). Decided: notes yes (100 chars), tags only (no phone), request money later, display name "Ada O.". App side next.
 
 ## 1. The product
-A user sends naira from their balance to another Doviz user by their **tag**
+A user sends naira from their balance to another Ziks user by their **tag**
 (e.g. `@ada`).
 - **Instant:** one database transaction moves the money between the two
   balances. No provider, no bank, no waiting, no webhooks.
@@ -13,14 +13,14 @@ A user sends naira from their balance to another Doviz user by their **tag**
   posting, never by editing.
 
 What's new vs. Send Money: Send Money pays out to **your own bank**;
-this pays **another person's Doviz balance**.
+this pays **another person's Ziks balance**.
 
 ## 2. Tags (`@handle`)
 - Column `users.tag`, unique **case-insensitively** (stored lowercase).
   Shown as `@ada`.
 - **Format:** `^[a-z][a-z0-9_]{2,19}$`. 3–20 characters, starting with a
   letter: letters, digits and underscores only.
-- **Reserved:** a list of tags no one can take (`doviz`, `support`, `admin`,
+- **Reserved:** a list of tags no one can take (`ziks`, `support`, `admin`,
   `help`, `official`, `team`, `security`, and similar), to stop impersonation.
 - **Choosing one:** new users pick a tag during profile setup. Existing users
   get a one-time "Choose your tag" prompt on home, and can't receive by tag
@@ -121,11 +121,11 @@ That's a small, general fix that protects every posting.
 
 ## 7. App (mobile)
 - **Send Money** gets two choices:
-  - **"To a Doviz user (free, instant)"**, the new flow;
+  - **"To a Ziks user (free, instant)"**, the new flow;
   - **"To my bank account"**, the existing withdrawal flow.
-- **To a Doviz user:**
+- **To a Ziks user:**
   1. Enter `@tag`. A debounced lookup shows the person's initials and
-     display name ("Ada O. · @ada") or "No Doviz user with that tag". Recent
+     display name ("Ada O. · @ada") or "No Ziks user with that tag". Recent
      recipients appear as chips.
   2. Amount (with `NairaInputFormatter`) and an optional note.
   3. Confirm sheet ("Send ₦5,000 to Ada O. (@ada) · Fee: Free") → PIN.
@@ -133,7 +133,7 @@ That's a small, general fix that protects every posting.
 - **Receiving:** a snackbar ("₦5,000 from @tunde") from `transfer.received`.
   Balance and history refresh by push.
 - **"My tag" card** in Profile and Receive: `@ada` with copy and share, and a
-  **QR code** (`qr_flutter` is already in the app) encoding `doviz://pay/ada`.
+  **QR code** (`qr_flutter` is already in the app) encoding `ziks://pay/ada`.
   Scanning it fills the recipient (the app already has `mobile_scanner`).
 - **Tag setup:** a screen in onboarding, plus the one-time home prompt for
   existing users.
@@ -168,7 +168,7 @@ That's a small, general fix that protects every posting.
 2. **Notes:** allow a short note ("for lunch")? (Suggestion: yes, 100
    characters, shown to both.)
 3. **Also find people by phone number?** It's convenient, but it reveals
-   whether a number uses Doviz. (Suggestion: tags only for v1.)
+   whether a number uses Ziks. (Suggestion: tags only for v1.)
 4. **Request money** ("@tunde requests ₦5,000"): v2?
 5. **Display name:** "Ada O." (first name + last initial), or full name?
    Banks show the full name for confirmation. (Suggestion: "Ada O.".)

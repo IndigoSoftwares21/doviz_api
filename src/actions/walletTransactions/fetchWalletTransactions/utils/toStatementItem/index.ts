@@ -1,8 +1,9 @@
 import Decimal from "decimal.js";
 import { ENTRY_DIRECTION } from "@/constants/ledger";
 import describeStatementEntry from "@/utils/wallet/describeStatementEntry";
+import toStatementTransfer, { StatementTransferRow } from "@/utils/transfers/toStatementTransfer";
 
-interface StatementRow {
+interface StatementRow extends StatementTransferRow {
     id: string;
     amount: string;
     balanceAfter: string;
@@ -20,6 +21,7 @@ interface StatementRow {
 /** One statement line: absolute amount + direction, balance after, and its source. */
 const toStatementItem = ({ row }: { row: StatementRow }) => {
     const amount = new Decimal(row.amount);
+    const transfer = toStatementTransfer({ row, isDebit: amount.isNegative() });
 
     return {
         id: row.id,
@@ -27,7 +29,7 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
         direction: amount.isNegative() ? ENTRY_DIRECTION.DEBIT : ENTRY_DIRECTION.CREDIT,
         amount: amount.abs().toFixed(2),
         balanceAfter: new Decimal(row.balanceAfter).toFixed(2),
-        description: describeStatementEntry({ type: row.type, symbol: row.symbol, cryptoAmount: row.cryptoAmount }),
+        description: transfer?.description ?? describeStatementEntry({ type: row.type, symbol: row.symbol, cryptoAmount: row.cryptoAmount }),
         createdAt: row.createdAt,
         deposit: row.depositId
             ? {
@@ -40,6 +42,13 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
                   markupPercent: row.markupPercent,
               }
             : null,
+        /** A Ziks-to-Ziks transfer: who it was with (as on the transfer). */
+        transfer: transfer && {
+            direction: transfer.direction,
+            counterpartyTag: transfer.counterpartyTag,
+            counterpartyName: transfer.counterpartyName,
+            note: transfer.note,
+        },
     };
 };
 

@@ -4,6 +4,8 @@ import cryptoTags from "@/docs/paths/cryptoTags";
 import cryptoPaths from "@/docs/paths/cryptoPaths";
 import cryptoBuyPaths from "@/docs/paths/cryptoBuy";
 import ziktagPaths from "@/docs/paths/user/ziktagPaths";
+import transferPaths from "@/docs/paths/transfers";
+import { transferTags } from "@/docs/paths/transfers/transferSchemas";
 import walletPaths from "@/docs/paths/wallet";
 import bankPaths from "@/docs/paths/bankPaths";
 import billPaths, { billTags } from "@/docs/paths/billPaths";
@@ -76,6 +78,7 @@ Limited endpoints return \`429\` when exceeded, with standard \`RateLimit\` / \`
         ...cryptoTags,
         ...billTags,
         ...nairaDepositTags,
+        ...transferTags,
         { name: "Health", description: "Service status." },
         {
             name: "Phone login",
@@ -410,6 +413,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
         ...cryptoPaths,
         ...cryptoBuyPaths,
         ...ziktagPaths,
+        ...transferPaths,
         ...walletPaths,
         ...bankPaths,
         ...billPaths,

@@ -28,6 +28,7 @@ const fetchWalletTransaction = async ({ userId, entryId }: { userId: string; ent
             detectedAt: row.detectedAt,
             completedAt: row.completedAt,
         },
+        transfer: item.transfer,
         /** A naira top-up by bank transfer: who sent it (masked), when the provider reported it. */
         bankTransfer: row.nairaDepositId
             ? {
