@@ -8,9 +8,10 @@ export const KYC_STATUS = {
 } as const;
 
 /**
- * How strongly a user is verified: `bvn` = BVN details matched; `bvn_selfie`
- * = plus a selfie matched to the BVN photo (what new users get);
- * `bvn_liveness` = plus a liveness check (planned).
+ * How strongly a user is verified: `bvn` = BVN details matched (names, date
+ * of birth, and the user's verified phone); `bvn_selfie` = plus the selfie
+ * matched to the official BVN photo (what new users get); `bvn_liveness` =
+ * plus a liveness check (planned).
  */
 export const KYC_LEVEL = {
     BVN: "bvn",
@@ -18,8 +19,11 @@ export const KYC_LEVEL = {
     BVN_LIVENESS: "bvn_liveness",
 } as const;
 
-/** The level new verifications use. */
-export const DEFAULT_KYC_LEVEL = KYC_LEVEL.BVN_SELFIE;
+/** The app_settings key that picks the level new verifications use. */
+export const KYC_LEVEL_SETTING = "kyc_level";
+
+/** Used when the setting is missing or names a level with no form. */
+export const DEFAULT_KYC_LEVEL = KYC_LEVEL.BVN;
 
 export const KYC_MESSAGES = {
     ALREADY_VERIFIED: "You're already verified.",

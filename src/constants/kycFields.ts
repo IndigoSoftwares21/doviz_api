@@ -71,6 +71,7 @@ export const KYC_FIELDS: Record<string, KycFieldDefinition> = {
         ],
     },
     address: { key: "address", type: KYC_FIELD_TYPE.TEXT, label: "Home address", hint: null, minLength: 5, maxLength: 200 },
+    city: { key: "city", type: KYC_FIELD_TYPE.TEXT, label: "City or town", hint: null, minLength: 2, maxLength: 60 },
     selfie: {
         key: "selfie",
         type: KYC_FIELD_TYPE.SELFIE,
@@ -84,6 +85,6 @@ export const KYC_FIELDS: Record<string, KycFieldDefinition> = {
 
 /** What each verification level asks for. */
 export const KYC_FORMS: Record<string, { required: string[]; optional: string[] }> = {
-    bvn: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address"], optional: ["middle_name"] },
-    bvn_selfie: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie"], optional: ["middle_name"] },
+    bvn: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "city"], optional: ["middle_name"] },
+    bvn_selfie: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "city", "selfie"], optional: ["middle_name"] },
 };

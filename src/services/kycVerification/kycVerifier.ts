@@ -1,7 +1,7 @@
 /**
  * Checks a person's KYC details against an official source (BVN/NIN records).
- * Provider-agnostic: Korapay is the first implementation; anything else
- * (Dojah, Smile ID…) implements the same interface. Never logs a value.
+ * Provider-agnostic: IdentifyOrg is the current implementation; anything else
+ * implements the same interface. Never logs a value.
  */
 export const KYC_OUTCOME = {
     VERIFIED: "verified",
@@ -26,6 +26,10 @@ export interface KycVerifier {
     readonly name: string;
     /** The levels it can decide. */
     readonly levels: readonly string[];
-    /** `values` by field key (decrypted, in memory only); a selfie is a data URI. */
-    verify(args: { level: string; values: Record<string, string> }): Promise<KycVerification>;
+    /**
+     * `values` by field key (decrypted, in memory only); a selfie is a data URI.
+     * `contact` is what Ziks has already verified about the user (their phone,
+     * confirmed by SMS code) — e.g. to match against the BVN record.
+     */
+    verify(args: { level: string; values: Record<string, string>; contact: { phoneNumber: string } }): Promise<KycVerification>;
 }

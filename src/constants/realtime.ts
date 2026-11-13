@@ -25,6 +25,8 @@ export const REALTIME_EVENT = {
     CRYPTO_PURCHASE_UPDATED: "crypto_purchase.updated",
     /** { transferId, amount, senderTag } — another Ziks user sent this user money (senderTag null if they have no Ziktag). */
     TRANSFER_RECEIVED: "transfer.received",
+    /** { accountNumber } — the user's personal account number is ready. */
+    VIRTUAL_ACCOUNT_READY: "virtual_account.ready",
     /** {} — the naira balance changed (payment held, refund, deposit credited). */
     WALLET_BALANCE_CHANGED: "wallet.balance_changed",
 } as const;

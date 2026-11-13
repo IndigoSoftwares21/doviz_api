@@ -1,17 +1,19 @@
-import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
+import fetchVerifiedKycFields from "@/actions/kycFields/fetchVerifiedKycFields";
 import selectProfileNames from "./queries/selectProfileNames";
-import { DEFAULT_KYC_LEVEL } from "@/constants/kyc";
+import fetchActiveKycLevel from "@/actions/appSettings/fetchActiveKycLevel";
 import { KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
 
 /**
  * The KYC form the app draws for a level — field by field, from the same
- * definitions the server validates with. Fields already on file come back
- * `onFile` (the user may leave them out and they're reused); identifiers show
+ * definitions the server validates with. Fields on file — from the user's
+ * VERIFIED details only, never a rejected attempt — come back `onFile` (the
+ * user may leave them out and they're reused); identifiers show
  * only a masked hint. Never returns a stored value.
  */
-const fetchKycForm = async ({ userId, level = DEFAULT_KYC_LEVEL }: { userId: string; level?: string }) => {
+const fetchKycForm = async ({ userId }: { userId: string }) => {
+    const { data: level } = await fetchActiveKycLevel();
     const form = KYC_FORMS[level];
-    const [{ data: onFile }, profile] = await Promise.all([fetchCurrentKycFields({ userId }), selectProfileNames({ userId })]);
+    const [{ data: onFile }, profile] = await Promise.all([fetchVerifiedKycFields({ userId }), selectProfileNames({ userId })]);
 
     const fields = [...form.required, ...form.optional].map((key) => {
         const { identifier: _identifier, displayHint: _displayHint, prefill, fresh, storedAsFile: _storedAsFile, ...definition } = KYC_FIELDS[key];

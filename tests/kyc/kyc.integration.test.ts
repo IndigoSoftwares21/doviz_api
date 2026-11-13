@@ -29,7 +29,7 @@ run("KYC against Postgres", () => {
     const decision = (outcome: KycVerification["outcome"], reason: string | null = null): KycVerification => ({ outcome, reason, reference: "REF-1", evidence: { firstName: outcome === "verified" } });
     const verify = jest.fn();
     const bvn = (digit: number) => `${digit}${Date.now().toString().slice(-10)}`;
-    const values = { first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja" };
+    const values = { first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja", city: "Lagos" };
     const users: string[] = [];
     const newUser = async () => {
         const phone = `+23481${String(randomBytes(4).readUInt32BE() % 100_000_000).padStart(8, "0")}`;
@@ -67,7 +67,7 @@ run("KYC against Postgres", () => {
         const theBvn = bvn(2);
         const { failure, recordId } = await submit(userId, { bvn: theBvn, ...values });
         expect(failure).toBeNull();
-        expect(verify).toHaveBeenCalledWith({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, selfie: expect.stringMatching(/^data:image\/jpeg/) }) });
+        expect(verify).toHaveBeenCalledWith(expect.objectContaining({ level: "bvn_selfie", contact: { phoneNumber: expect.stringMatching(/^\+234/) }, values: expect.objectContaining({ bvn: theBvn, selfie: expect.stringMatching(/^data:image\/jpeg/) }) }));
 
         const stored = await fields(userId);
         expect(JSON.stringify(stored)).not.toMatch(new RegExp(`${theBvn}|Allen|Okafor|mem://`));
@@ -78,18 +78,33 @@ run("KYC against Postgres", () => {
         await expect(openUserKyc({ recordId: recordId!, purpose: "test" })).resolves.toMatchObject({ data: { values: { bvn: theBvn, last_name: "Okafor" } } });
     });
 
-    it("rejects with a reason, keeps the details for reuse, and a retry sends only what changed (plus a new selfie)", async () => {
+    it("rejects with a reason; the failed details are kept as history but NOT on file, so the retry sends them again", async () => {
         const userId = await newUser();
         const theBvn = bvn(3);
         verify.mockResolvedValueOnce(decision("rejected", "Your date of birth doesn't match your BVN."));
         const first = await submit(userId, { bvn: theBvn, ...values });
         await expect(fetchUserKyc({ userId })).resolves.toMatchObject({ data: { status: "rejected", rejectionReason: "Your date of birth doesn't match your BVN." } });
 
-        const second = await submit(userId, { date_of_birth: "1994-03-19" });
+        // Nothing from a rejected attempt is reused: leaving fields out isn't enough to verify.
+        await expect(submit(userId, { date_of_birth: "1994-03-19" })).rejects.toThrow(/missing required fields/);
+
+        const second = await submit(userId, { bvn: theBvn, ...values, date_of_birth: "1994-03-19" });
         expect(second.failure).toBeNull();
-        expect(verify).toHaveBeenLastCalledWith({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, first_name: "Ada", date_of_birth: "1994-03-19" }) });
+        expect(verify).toHaveBeenLastCalledWith(expect.objectContaining({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, date_of_birth: "1994-03-19" }) }));
         expect((await records(userId)).map((record) => record.status)).toEqual(["rejected", "verified"]);
+        // The failed attempt still shows exactly what it checked.
         await expect(openUserKyc({ recordId: first.recordId!, purpose: "test" })).resolves.toMatchObject({ data: { values: { date_of_birth: "1994-03-18" } } });
+    });
+
+    it("reuses only VERIFIED details: a later attempt (e.g. an upgrade) may leave them out", async () => {
+        const userId = await newUser();
+        const theBvn = bvn(8);
+        await submit(userId, { bvn: theBvn, ...values }, "bvn");
+        verify.mockClear();
+        const upgrade = await submit(userId, {}, "bvn_selfie");
+        expect(upgrade.failure).toBeNull();
+        expect(verify).toHaveBeenCalledWith(expect.objectContaining({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, address: values.address, selfie: expect.any(String) }) }));
+        expect((await records(userId)).map((record) => record.status)).toEqual(["superseded", "verified"]);
     });
 
     it("records nothing and removes the evidence when the verifier can't answer", async () => {

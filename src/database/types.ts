@@ -10,6 +10,12 @@ import { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysel
 
 // Database interface with auto-generated fields wrapped in Generated<>
 export interface Database {
+  app_settings: {
+    key: ColumnType<string>;
+    value: ColumnType<string>;
+    updatedAt: Generated<Date>;
+  };
+
   audit_logs: {
     id: Generated<string>;
     actorType: ColumnType<string>;
@@ -642,6 +648,22 @@ export interface Database {
     tag: ColumnType<string | null>;
     tagChangedAt: ColumnType<Date | null>;
     activeKycRecordId: ColumnType<string | null>;
+  };
+
+  virtual_accounts: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    kycRecordId: ColumnType<string>;
+    provider: ColumnType<string>;
+    environment: ColumnType<string>;
+    customerRef: ColumnType<string>;
+    accountNumber: ColumnType<string>;
+    accountName: ColumnType<string>;
+    bankName: ColumnType<string>;
+    bankCode: ColumnType<string | null>;
+    status: ColumnType<string>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
   };
 
 }

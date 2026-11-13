@@ -27,6 +27,9 @@ const ACTION_FAILURE = {
     KYC_ALREADY_VERIFIED: "kyc_already_verified",
     KYC_IN_REVIEW: "kyc_in_review",
     KYC_IDENTIFIER_IN_USE: "kyc_identifier_in_use",
+    KYC_REQUIRED: "kyc_required",
+    VIRTUAL_ACCOUNT_REFUSED: "virtual_account_refused",
+    ACCOUNT_NUMBERS_OFF: "account_numbers_off",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

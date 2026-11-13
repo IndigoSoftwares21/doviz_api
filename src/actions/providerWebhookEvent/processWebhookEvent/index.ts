@@ -3,6 +3,7 @@ import syncDeposit from "@/actions/deposit/syncDeposit";
 import syncBillPayment from "@/actions/billPayment/syncBillPayment";
 import syncNairaDeposit from "@/actions/nairaDeposit/syncNairaDeposit";
 import syncWithdrawal from "@/actions/withdrawal/syncWithdrawal";
+import syncAccountDeposit from "@/actions/accountDeposit/syncAccountDeposit";
 import monitoring from "@/utils/monitoring";
 import selectWebhookEvent from "./queries/selectWebhookEvent";
 import updateWebhookEventAttempt from "./queries/updateWebhookEventAttempt";
@@ -53,6 +54,12 @@ const processWebhookEvent = async ({ id }: { id: string }) => {
                 await syncNairaDeposit({ nairaDepositId: deposit.id });
                 status = WEBHOOK_EVENT_STATUS.PROCESSED;
             }
+        }
+
+        // Money paid into a user's account number — re-fetched from the provider that issued it.
+        if (parsed?.resourceType === WEBHOOK_RESOURCE_TYPE.ACCOUNT_DEPOSIT && parsed.resourceId) {
+            const { data } = await syncAccountDeposit({ provider: event.provider, reference: parsed.resourceId });
+            status = data.outcome === SYNC_OUTCOME.IGNORED ? WEBHOOK_EVENT_STATUS.IGNORED : WEBHOOK_EVENT_STATUS.PROCESSED;
         }
 
         if (parsed?.resourceType === WEBHOOK_RESOURCE_TYPE.PAYOUT && parsed.resourceId) {

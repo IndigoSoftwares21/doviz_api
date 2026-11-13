@@ -1,7 +1,7 @@
 import { Kysely } from "kysely";
 import { Database } from "@/database/types";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
-import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
+import fetchVerifiedKycFields from "@/actions/kycFields/fetchVerifiedKycFields";
 import { KycVerification } from "@/services/kycVerification/kycVerifier";
 import selectOpenKycRecords from "../../queries/selectOpenKycRecords";
 import claimIdentifier from "../../queries/claimIdentifier";
@@ -15,7 +15,7 @@ import ACTION_FAILURE from "@/constants/actionFailure";
 import AUDIT_ACTIONS from "@/constants/auditActions";
 import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 import { KYC_STATUS } from "@/constants/kyc";
-import { KYC_FORMS } from "@/constants/kycFields";
+import { KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
 
 interface IRecordKycAttempt {
     trx: Kysely<Database>;
@@ -40,13 +40,19 @@ const recordKycAttempt = async ({ trx, userId, level, sealed, decidedBy, verific
     if (open.some((record) => record.status === KYC_STATUS.PENDING)) throw new KycRefusal(ACTION_FAILURE.KYC_IN_REVIEW);
     if (open.some((record) => record.status === KYC_STATUS.VERIFIED && record.level === level)) throw new KycRefusal(ACTION_FAILURE.KYC_ALREADY_VERIFIED);
 
+    // Link exactly what was checked: what was just submitted, else the verified value on file.
+    const { data: onFile } = await fetchVerifiedKycFields({ userId, trx });
     for (const field of sealed) await replaceKycField({ trx, field });
 
     const form = KYC_FORMS[level];
-    const { data: current } = await fetchCurrentKycFields({ userId, trx });
-    const missing = form.required.filter((key) => !current.has(key));
+    const submitted = new Map(sealed.map((field) => [field.fieldKey, field]));
+    const pick = (key: string) => submitted.get(key) ?? (KYC_FIELDS[key].fresh ? undefined : onFile.get(key));
+    const missing = form.required.filter((key) => !pick(key));
     if (missing.length) throw new Error(`KYC attempt is missing required fields: ${missing.join(", ")}`);
-    const linked = [...form.required, ...form.optional].flatMap((key) => (current.has(key) ? [current.get(key)!] : []));
+    const linked = [...form.required, ...form.optional].flatMap((key) => {
+        const field = pick(key);
+        return field ? [{ id: field.id, fieldKey: key, lookupIndex: field.lookupIndex }] : [];
+    });
 
     for (const field of linked) {
         if (field.lookupIndex && !(await claimIdentifier({ trx, userId, fieldKey: field.fieldKey, lookupIndex: field.lookupIndex }))) {

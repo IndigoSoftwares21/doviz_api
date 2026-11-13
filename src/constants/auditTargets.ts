@@ -29,6 +29,8 @@ export const AUDIT_ENTITY_TYPE = {
     INTERNAL_TRANSFER: "internal_transfer",
     TRANSFER_LIMIT: "transfer_limit",
     KYC_RECORD: "kyc_record",
+    APP_SETTING: "app_setting",
+    VIRTUAL_ACCOUNT: "virtual_account",
 } as const;
 
 export type AuditActorType = (typeof AUDIT_ACTOR_TYPE)[keyof typeof AUDIT_ACTOR_TYPE];

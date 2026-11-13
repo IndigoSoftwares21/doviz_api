@@ -4,6 +4,8 @@ import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import createUserKyc from "@/actions/userKyc/createUserKyc";
 import fetchUserKyc from "@/actions/userKyc/fetchUserKyc";
+import createVirtualAccount from "@/actions/virtualAccount/createVirtualAccount";
+import monitoring from "@/utils/monitoring";
 import postUserKycSchema from "./schema/postUserKycSchema";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
@@ -38,6 +40,11 @@ const postUserKyc = async (req: Request, res: Response) => {
         }
 
         const { data } = await fetchUserKyc({ userId });
+        // Verified: open their account number now, in the background — the app hears
+        // "virtual_account.ready" over the socket; a failure leaves the button to retry.
+        if (data.status === "verified") {
+            createVirtualAccount({ userId }).catch((error) => monitoring.error("Couldn't create an account number after verification", error as Error));
+        }
         return handleSuccess({ res, req, message: data.status === "verified" ? "You're verified" : "We couldn't verify you", code: 201, data });
     } catch (error) {
         return handleError({ res, req, message: "Failed to submit your details", error });

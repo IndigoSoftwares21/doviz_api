@@ -45,6 +45,8 @@ export const WEBHOOK_RESOURCE_TYPE = {
     PAYOUT: "payout",
     BILL_PAYMENT: "bill_payment",
     NAIRA_DEPOSIT: "naira_deposit",
+    /** Money paid into a user's personal account number. resourceId = the provider's transaction reference. */
+    ACCOUNT_DEPOSIT: "account_deposit",
     OTHER: "other",
 } as const;
 

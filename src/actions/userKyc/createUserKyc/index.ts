@@ -1,12 +1,14 @@
 import { withTransaction } from "@/database";
 import createPinVerification, { PinVerification } from "@/actions/pinVerification/createPinVerification";
-import openCurrentKycValues from "@/actions/kycFields/openCurrentKycValues";
+import fetchVerifiedKycFields from "@/actions/kycFields/fetchVerifiedKycFields";
+import openKycFieldValues from "@/actions/kycFields/openKycFieldValues";
 import getKycVerifier from "@/services/kycVerification/getKycVerifier";
 import { KYC_OUTCOME } from "@/services/kycVerification/kycVerifier";
 import monitoring from "@/utils/monitoring";
 import sealSubmittedValues from "./utils/sealSubmittedValues";
 import storeFileValues, { removeUploads } from "./utils/storeFileValues";
 import precheckKycAttempt from "./utils/precheckKycAttempt";
+import selectUserPhone from "./queries/selectUserPhone";
 import recordKycAttempt from "./utils/recordKycAttempt";
 import KycRefusal from "./utils/kycRefusal";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
@@ -41,8 +43,9 @@ const createUserKyc = async ({ userId, level, values, pin, ipAddress, userAgent 
     if (blocked.failure) return result(blocked.failure, { fieldKey: blocked.fieldKey });
 
     const form = KYC_FORMS[level];
-    const reused = [...form.required, ...form.optional].filter((key) => !(key in values) && !KYC_FIELDS[key].fresh);
-    const { data: fromFile } = await openCurrentKycValues({ userId, keys: reused, purpose: "verify_kyc" });
+    const { data: onFile } = await fetchVerifiedKycFields({ userId });
+    const reused = [...form.required, ...form.optional].filter((key) => !(key in values) && !KYC_FIELDS[key].fresh && onFile.has(key));
+    const { data: fromFile } = await openKycFieldValues({ userId, ids: reused.map((key) => onFile.get(key)!.id), purpose: "verify_kyc" });
 
     let stored: Awaited<ReturnType<typeof storeFileValues>>;
     try {
@@ -53,7 +56,7 @@ const createUserKyc = async ({ userId, level, values, pin, ipAddress, userAgent 
     }
 
     const verifier = getKycVerifier();
-    const decision = await verifier.verify({ level, values: { ...fromFile, ...values } });
+    const decision = await verifier.verify({ level, values: { ...fromFile, ...values }, contact: { phoneNumber: await selectUserPhone({ userId }) } });
     if (decision.outcome === KYC_OUTCOME.UNAVAILABLE) {
         await removeUploads(stored.uploads);
         return result(ACTION_FAILURE.PROVIDER_UNAVAILABLE);

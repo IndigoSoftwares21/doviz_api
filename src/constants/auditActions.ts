@@ -55,6 +55,8 @@ const AUDIT_ACTIONS = {
     BIOMETRIC_VERIFICATION_FAILED: "security.biometric.verification_failed",
     KYC_SUBMITTED: "kyc.submitted",
     KYC_VERIFIED: "kyc.verified",
+    APP_SETTING_CHANGED: "ops.app_setting.changed",
+    VIRTUAL_ACCOUNT_CREATED: "wallet.virtual_account.created",
     KYC_REJECTED: "kyc.rejected",
     /** Someone's KYC was decrypted — every read of the raw data, with its purpose. */
     KYC_DECRYPTED: "kyc.decrypted",

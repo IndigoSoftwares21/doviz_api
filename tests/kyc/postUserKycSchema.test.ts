@@ -1,11 +1,15 @@
 import postUserKycSchema from "@/controllers/userKyc/post/schema/postUserKycSchema";
-import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
+import fetchVerifiedKycFields from "@/actions/kycFields/fetchVerifiedKycFields";
 import { selfieDataUri } from "./kycFixtures";
+import fetchActiveKycLevel from "@/actions/appSettings/fetchActiveKycLevel";
 
-jest.mock("@/actions/kycFields/fetchCurrentKycFields");
+const level = (value: string) => jest.mocked(fetchActiveKycLevel).mockResolvedValue({ data: value });
+
+jest.mock("@/actions/kycFields/fetchVerifiedKycFields");
+jest.mock("@/actions/appSettings/fetchActiveKycLevel");
 
 const onFile = (...keys: string[]) =>
-    jest.mocked(fetchCurrentKycFields).mockResolvedValue({ data: new Map(keys.map((key) => [key, { id: key, fieldKey: key }])) } as never);
+    jest.mocked(fetchVerifiedKycFields).mockResolvedValue({ data: new Map(keys.map((key) => [key, { id: key, fieldKey: key }])) } as never);
 
 const details = {
     bvn: "222 1234 5678",
@@ -15,6 +19,7 @@ const details = {
     date_of_birth: "1994-03-18",
     gender: "female",
     address: "12  Allen Avenue,\n Ikeja",
+    city: "Lagos",
     selfie: selfieDataUri(),
 };
 const parse = (input: Record<string, unknown>) => postUserKycSchema.safeParseAsync({ userId: "user-1", pin: "1234", ...input });
@@ -24,30 +29,34 @@ const problems = async (input: Record<string, unknown>) => {
 };
 
 describe("KYC submission validation (built from the field registry)", () => {
-    beforeEach(() => onFile());
+    beforeEach(() => {
+        onFile();
+        level("bvn_selfie");
+    });
 
     it("accepts, normalises, and drops blank optional fields", async () => {
         await expect(postUserKycSchema.parseAsync({ userId: "user-1", pin: "1234", details })).resolves.toEqual({
             level: "bvn_selfie",
             pin: "1234",
-            values: { bvn: "22212345678", first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja", selfie: details.selfie },
+            values: { bvn: "22212345678", first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja", city: "Lagos", selfie: details.selfie },
         });
     });
 
     it("lets fields already on file be left out, and reuses them", async () => {
-        onFile("bvn", "date_of_birth", "gender", "address", "selfie");
+        onFile("bvn", "date_of_birth", "gender", "address", "city", "selfie");
+        level("bvn");
         const parsed = await parse({ level: "bvn", details: { first_name: "Ada", last_name: "Okafor" } });
         expect(parsed.success && parsed.data.values).toEqual({ first_name: "Ada", last_name: "Okafor" });
     });
 
     it("always asks for a new selfie, even when one is on file", async () => {
-        onFile("bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie");
+        onFile("bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "city", "selfie");
         expect(await problems({ details: {} })).toEqual(["details.selfie: Take a selfie"]);
     });
 
     it("asks for every required field that isn't on file", async () => {
         const found = await problems({ details: {} });
-        for (const key of ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie"]) {
+        for (const key of ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "city", "selfie"]) {
             expect(found.some((problem) => problem.startsWith(`details.${key}:`))).toBe(true);
         }
         expect(found.some((problem) => problem.startsWith("details.middle_name:"))).toBe(false);
@@ -77,7 +86,8 @@ describe("KYC submission validation (built from the field registry)", () => {
 
     it("refuses fields the form doesn't ask for, and unknown levels", async () => {
         expect(await problems({ details: { ...details, mothers_maiden_name: "x" } })).toContain("details.mothers_maiden_name: This isn't part of the form");
-        expect((await problems({ details, level: "gold" })).some((problem) => problem.startsWith("level:"))).toBe(true);
+        // The server's setting decides the level: a form from before a switch is refused.
+        expect(await problems({ details, level: "bvn" })).toEqual(["level: The verification steps changed. Go back and open verification again."]);
     });
 
     it("never echoes what was typed in its messages", async () => {

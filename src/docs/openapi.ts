@@ -5,6 +5,7 @@ import cryptoPaths from "@/docs/paths/cryptoPaths";
 import cryptoBuyPaths from "@/docs/paths/cryptoBuy";
 import ziktagPaths from "@/docs/paths/user/ziktagPaths";
 import kycPaths from "@/docs/paths/user/kycPaths";
+import virtualAccountPaths from "@/docs/paths/user/virtualAccountPaths";
 import transferPaths from "@/docs/paths/transfers";
 import { transferTags } from "@/docs/paths/transfers/transferSchemas";
 import walletPaths from "@/docs/paths/wallet";
@@ -415,6 +416,7 @@ Challenges expire after ${AUTH.BIOMETRIC_CHALLENGE_TTL_SECONDS / 60} minutes and
         ...cryptoBuyPaths,
         ...ziktagPaths,
         ...kycPaths,
+        ...virtualAccountPaths,
         ...transferPaths,
         ...walletPaths,
         ...bankPaths,

@@ -24,7 +24,7 @@ const storeFileValues = async ({ userId, values }: { userId: string; values: Rec
             if (!KYC_FIELDS[key]?.storedAsFile) continue;
             const blobId = randomUUID();
             const sealed = sealKycValue({ userId, fieldKey: fileFieldKey(key), rowId: blobId, value, keyring: getKycKeyring() });
-            const file = await getFileStorage().put({ bytes: Buffer.from(JSON.stringify(sealed), "utf8"), filename: `${blobId}.enc`, folder: STORAGE_FOLDERS.KYC_EVIDENCE.path });
+            const file = await getFileStorage().put({ bytes: Buffer.from(JSON.stringify(sealed), "utf8"), filename: `${blobId}.json`, folder: STORAGE_FOLDERS.KYC_EVIDENCE.path });
             uploads.push(file);
             stored[key] = JSON.stringify({ storage: getFileStorage().name, id: file.id, url: file.url, blobId });
         }

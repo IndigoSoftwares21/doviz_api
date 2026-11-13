@@ -41,7 +41,7 @@ const field = {
 const form = {
     type: "object",
     description: "The form to draw, field by field — the server validates with the same definitions, so the app hardcodes no field.",
-    properties: { level: { type: "string", example: "bvn_selfie" }, fields: { type: "array", items: field } },
+    properties: { level: { type: "string", example: "bvn", description: "`bvn`: BVN details matched (names, date of birth, the user's verified phone). `bvn_selfie`: plus a selfie matched to the BVN photo. Set on the server." }, fields: { type: "array", items: field } },
 };
 const ok = (message: string, code: number) => ({
     description: message,
@@ -71,7 +71,7 @@ const kycPaths = {
                     type: "object",
                     required: ["details", "pin"],
                     properties: {
-                        level: { type: "string", enum: ["bvn", "bvn_selfie"], default: "bvn_selfie", description: "Send back `form.level`." },
+                        level: { type: "string", enum: ["bvn", "bvn_selfie"], description: "Send back `form.level`. The server's setting decides the level (`npm run kyc:level -- <level>`); a form from before a switch gets a 400 on `level` — reload GET /user/kyc." },
                         details: {
                             type: "object",
                             additionalProperties: { type: "string" },
