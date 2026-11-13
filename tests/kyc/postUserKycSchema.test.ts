@@ -1,5 +1,6 @@
 import postUserKycSchema from "@/controllers/userKyc/post/schema/postUserKycSchema";
 import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
+import { selfieDataUri } from "./kycFixtures";
 
 jest.mock("@/actions/kycFields/fetchCurrentKycFields");
 
@@ -14,6 +15,7 @@ const details = {
     date_of_birth: "1994-03-18",
     gender: "female",
     address: "12  Allen Avenue,\n Ikeja",
+    selfie: selfieDataUri(),
 };
 const parse = (input: Record<string, unknown>) => postUserKycSchema.safeParseAsync({ userId: "user-1", pin: "1234", ...input });
 const problems = async (input: Record<string, unknown>) => {
@@ -26,21 +28,26 @@ describe("KYC submission validation (built from the field registry)", () => {
 
     it("accepts, normalises, and drops blank optional fields", async () => {
         await expect(postUserKycSchema.parseAsync({ userId: "user-1", pin: "1234", details })).resolves.toEqual({
-            level: "bvn",
+            level: "bvn_selfie",
             pin: "1234",
-            values: { bvn: "22212345678", first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja" },
+            values: { bvn: "22212345678", first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja", selfie: details.selfie },
         });
     });
 
     it("lets fields already on file be left out, and reuses them", async () => {
-        onFile("bvn", "date_of_birth", "gender", "address");
-        const parsed = await parse({ details: { first_name: "Ada", last_name: "Okafor" } });
+        onFile("bvn", "date_of_birth", "gender", "address", "selfie");
+        const parsed = await parse({ level: "bvn", details: { first_name: "Ada", last_name: "Okafor" } });
         expect(parsed.success && parsed.data.values).toEqual({ first_name: "Ada", last_name: "Okafor" });
+    });
+
+    it("always asks for a new selfie, even when one is on file", async () => {
+        onFile("bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie");
+        expect(await problems({ details: {} })).toEqual(["details.selfie: Take a selfie"]);
     });
 
     it("asks for every required field that isn't on file", async () => {
         const found = await problems({ details: {} });
-        for (const key of ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address"]) {
+        for (const key of ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie"]) {
             expect(found.some((problem) => problem.startsWith(`details.${key}:`))).toBe(true);
         }
         expect(found.some((problem) => problem.startsWith("details.middle_name:"))).toBe(false);
@@ -59,6 +66,10 @@ describe("KYC submission validation (built from the field registry)", () => {
         ["address", "12 <script> Road"],
         ["first_name", "Ada2"],
         ["first_name", 42],
+        ["selfie", "data:image/jpeg;base64,AAAA"],
+        ["selfie", `data:image/jpeg;base64,${Buffer.alloc(3000, 1).toString("base64")}`],
+        ["selfie", "https://example.com/me.jpg"],
+        ["selfie", `data:image/jpeg;base64,${Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(1_600_000)]).toString("base64")}`],
     ])("refuses a bad %s", async (key, value) => {
         const found = await problems({ details: { ...details, [key]: value } });
         expect(found.some((problem) => problem.startsWith(`details.${key}:`))).toBe(true);

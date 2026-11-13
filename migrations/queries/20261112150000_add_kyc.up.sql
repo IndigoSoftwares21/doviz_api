@@ -54,8 +54,12 @@ CREATE TABLE kyc_records (
     status VARCHAR(16) NOT NULL,
     level VARCHAR(24) NOT NULL,
     rejection_reason VARCHAR(255),
-    -- What decided it (e.g. the verifier that matched the BVN).
+    -- What decided it (e.g. the verifier that matched the BVN), its reference
+    -- for the check, and the evidence: per-field match results and scores
+    -- only — never a value or an image.
     decided_by VARCHAR(32),
+    provider_reference VARCHAR(128),
+    evidence JSONB,
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     decided_at TIMESTAMPTZ,
     superseded_at TIMESTAMPTZ,

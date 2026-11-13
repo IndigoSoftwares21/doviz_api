@@ -434,6 +434,8 @@ export interface Database {
     level: ColumnType<string>;
     rejectionReason: ColumnType<string | null>;
     decidedBy: ColumnType<string | null>;
+    providerReference: ColumnType<string | null>;
+    evidence: ColumnType<unknown | null>;
     submittedAt: Generated<Date>;
     decidedAt: ColumnType<Date | null>;
     supersededAt: ColumnType<Date | null>;

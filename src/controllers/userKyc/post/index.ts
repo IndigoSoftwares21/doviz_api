@@ -11,7 +11,7 @@ import { KYC_MESSAGES } from "@/constants/kyc";
 import { KYC_FIELDS } from "@/constants/kycFields";
 
 // Reads only the fields it needs. Nothing personal is logged or echoed back —
-// the response is the masked status.
+// the response is the masked status (verified or rejected: the check runs now).
 const postUserKyc = async (req: Request, res: Response) => {
     try {
         const { level, details, pin } = req.body ?? {};
@@ -32,12 +32,13 @@ const postUserKyc = async (req: Request, res: Response) => {
         if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return handlePinFailure({ res, req, verification });
         if (failure === ACTION_FAILURE.KYC_ALREADY_VERIFIED) return handleError({ res, req, message: KYC_MESSAGES.ALREADY_VERIFIED, code: 409 });
         if (failure === ACTION_FAILURE.KYC_IN_REVIEW) return handleError({ res, req, message: KYC_MESSAGES.IN_REVIEW, code: 409 });
+        if (failure === ACTION_FAILURE.PROVIDER_UNAVAILABLE) return handleError({ res, req, message: KYC_MESSAGES.UNAVAILABLE, code: 503 });
         if (failure === ACTION_FAILURE.KYC_IDENTIFIER_IN_USE) {
             return handleError({ res, req, message: KYC_MESSAGES.identifierInUse(KYC_FIELDS[fieldKey!]?.label ?? "detail"), code: 409 });
         }
 
         const { data } = await fetchUserKyc({ userId });
-        return handleSuccess({ res, req, message: "Details received", code: 201, data });
+        return handleSuccess({ res, req, message: data.status === "verified" ? "You're verified" : "We couldn't verify you", code: 201, data });
     } catch (error) {
         return handleError({ res, req, message: "Failed to submit your details", error });
     }

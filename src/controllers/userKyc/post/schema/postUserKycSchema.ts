@@ -2,8 +2,8 @@ import { z } from "zod";
 import pinSchema from "@/utils/validation/pinSchema";
 import kycValueSchema from "@/utils/kyc/kycValueSchema";
 import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
-import { KYC_LEVEL } from "@/constants/kyc";
-import { KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
+import { DEFAULT_KYC_LEVEL, KYC_LEVEL } from "@/constants/kyc";
+import { KYC_FIELD_TYPE, KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
 
 const isBlank = (value: unknown) => value === undefined || value === null || (typeof value === "string" && value.trim() === "");
 
@@ -16,7 +16,9 @@ const isBlank = (value: unknown) => value === undefined || value === null || (ty
 const postUserKycSchema = z
     .object({
         userId: z.string(),
-        level: z.enum([KYC_LEVEL.BVN], { errorMap: () => ({ message: "That verification level isn't available" }) }).default(KYC_LEVEL.BVN),
+        level: z
+            .enum([KYC_LEVEL.BVN, KYC_LEVEL.BVN_SELFIE], { errorMap: () => ({ message: "That verification level isn't available" }) })
+            .default(DEFAULT_KYC_LEVEL),
         details: z.record(z.unknown(), { invalid_type_error: "Send your details" }).default({}),
         pin: pinSchema,
     })
@@ -32,8 +34,8 @@ const postUserKycSchema = z
         for (const key of asked) {
             const field = KYC_FIELDS[key];
             if (isBlank(details[key])) {
-                if (form.required.includes(key) && !onFile.has(key)) {
-                    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["details", key], message: `Enter your ${field.label.toLowerCase()}` });
+                if (form.required.includes(key) && (field.fresh || !onFile.has(key))) {
+                    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["details", key], message: field.type === KYC_FIELD_TYPE.SELFIE ? "Take a selfie" : `Enter your ${field.label.toLowerCase()}` });
                 }
                 continue;
             }

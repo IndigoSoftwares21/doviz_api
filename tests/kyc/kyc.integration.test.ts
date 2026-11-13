@@ -1,19 +1,33 @@
 /**
- * Real-Postgres check of field-level KYC (skipped by default — DB_INTEGRATION=true).
+ * Real-Postgres check of KYC (skipped by default — DB_INTEGRATION=true).
+ * The verifier and file storage are fakes: no money, no network.
  */
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { db, disconnect } from "@/database";
 import createUserKyc from "@/actions/userKyc/createUserKyc";
 import fetchUserKyc from "@/actions/userKyc/fetchUserKyc";
 import openUserKyc from "@/actions/userKyc/openUserKyc";
 import createPinVerification from "@/actions/pinVerification/createPinVerification";
 import { resetKycKeyring } from "@/services/kycVault/getKycKeyring";
+import { setKycVerifier } from "@/services/kycVerification/getKycVerifier";
+import { setFileStorage } from "@/services/fileStorage/getFileStorage";
+import { KycVerification } from "@/services/kycVerification/kycVerifier";
+import { selfieDataUri } from "./kycFixtures";
 
 jest.mock("@/actions/pinVerification/createPinVerification");
 
 const run = process.env.DB_INTEGRATION === "true" ? describe : describe.skip;
 
 run("KYC against Postgres", () => {
+    const files = new Map<string, Buffer>();
+    const storage = {
+        name: "memory",
+        put: jest.fn(async ({ bytes }: { bytes: Buffer }) => { const id = randomUUID(); files.set(id, bytes); return { id, url: `mem://${id}` }; }),
+        get: jest.fn(async ({ id }: { id: string }) => files.get(id)!),
+        remove: jest.fn(async ({ id }: { id: string }) => { files.delete(id); }),
+    };
+    const decision = (outcome: KycVerification["outcome"], reason: string | null = null): KycVerification => ({ outcome, reason, reference: "REF-1", evidence: { firstName: outcome === "verified" } });
+    const verify = jest.fn();
     const bvn = (digit: number) => `${digit}${Date.now().toString().slice(-10)}`;
     const values = { first_name: "Ada", last_name: "Okafor", date_of_birth: "1994-03-18", gender: "female", address: "12 Allen Avenue, Ikeja" };
     const users: string[] = [];
@@ -23,85 +37,89 @@ run("KYC against Postgres", () => {
         users.push(user.id);
         return user.id;
     };
-    const submit = (userId: string, submitted: Record<string, string>) => createUserKyc({ userId, level: "bvn", values: submitted, pin: "1234", ipAddress: null, userAgent: null });
+    const submit = (userId: string, submitted: Record<string, string>, level = "bvn_selfie") =>
+        createUserKyc({ userId, level, values: level === "bvn_selfie" ? { selfie: selfieDataUri(), ...submitted } : submitted, pin: "1234", ipAddress: null, userAgent: null });
     const fields = (userId: string) => db.selectFrom("kyc_fields").selectAll().where("userId", "=", userId).orderBy("createdAt").execute();
-    const decide = (recordId: string, userId: string, status: "verified" | "rejected") =>
-        db.transaction().execute(async (trx) => {
-            await trx.updateTable("kyc_records").set({ status, decidedAt: new Date(), decidedBy: "test", rejectionReason: status === "rejected" ? "No match" : null }).where("id", "=", recordId).execute();
-            if (status === "verified") await trx.updateTable("users").set({ activeKycRecordId: recordId }).where("id", "=", userId).execute();
-        });
+    const records = (userId: string) => db.selectFrom("kyc_records").selectAll().where("userId", "=", userId).orderBy("submittedAt").execute();
 
     beforeAll(() => {
         process.env.KYC_ENCRYPTION_KEYS = `1:${randomBytes(32).toString("base64")}`;
         process.env.KYC_ENCRYPTION_KEY_VERSION = "1";
         process.env.KYC_BVN_INDEX_KEY = randomBytes(32).toString("base64");
         resetKycKeyring();
+        setKycVerifier({ name: "fakeverifier", levels: ["bvn", "bvn_selfie"], verify });
+        setFileStorage(storage);
     });
-    beforeEach(() => jest.mocked(createPinVerification).mockResolvedValue({ data: { status: "verified" } } as never));
+    beforeEach(() => {
+        jest.clearAllMocks();
+        verify.mockResolvedValue(decision("verified"));
+        jest.mocked(createPinVerification).mockResolvedValue({ data: { status: "verified" } } as never);
+    });
     afterAll(async () => {
+        setKycVerifier(null);
+        setFileStorage(null);
         if (users.length) await db.deleteFrom("users").where("id", "in", users).execute();
         await disconnect();
     });
 
-    it("stores each value as its own encrypted field, linked to a pending attempt", async () => {
+    it("verifies on the spot: encrypted fields, encrypted selfie evidence, the attempt in force", async () => {
         const userId = await newUser();
         const theBvn = bvn(2);
         const { failure, recordId } = await submit(userId, { bvn: theBvn, ...values });
         expect(failure).toBeNull();
+        expect(verify).toHaveBeenCalledWith({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, selfie: expect.stringMatching(/^data:image\/jpeg/) }) });
 
         const stored = await fields(userId);
-        expect(stored.map((field) => field.fieldKey).sort()).toEqual(["address", "bvn", "date_of_birth", "first_name", "gender", "last_name"]);
-        expect(JSON.stringify(stored)).not.toMatch(new RegExp(`${theBvn}|Allen|1994-03-18|Okafor`));
-        expect(stored.find((field) => field.fieldKey === "bvn")).toMatchObject({ displayHint: theBvn.slice(-4), lookupIndex: expect.stringMatching(/^[0-9a-f]{64}$/) });
-        const linked = await db.selectFrom("kyc_record_fields").selectAll().where("recordId", "=", recordId!).execute();
-        expect(linked).toHaveLength(6);
-        await expect(fetchUserKyc({ userId })).resolves.toMatchObject({ data: { status: "pending", bvn: `•••••••${theBvn.slice(-4)}` } });
+        expect(JSON.stringify(stored)).not.toMatch(new RegExp(`${theBvn}|Allen|Okafor|mem://`));
+        const [blob] = [...files.values()];
+        expect(blob.toString("utf8")).not.toContain("data:image");
+        expect(await records(userId)).toEqual([expect.objectContaining({ id: recordId, status: "verified", decidedBy: "fakeverifier", providerReference: "REF-1", evidence: { firstName: true } })]);
+        await expect(fetchUserKyc({ userId })).resolves.toMatchObject({ data: { status: "verified", level: "bvn_selfie", recordId, bvn: `•••••••${theBvn.slice(-4)}` } });
+        await expect(openUserKyc({ recordId: recordId!, purpose: "test" })).resolves.toMatchObject({ data: { values: { bvn: theBvn, last_name: "Okafor" } } });
     });
 
-    it("reuses what's on file: a retry after rejection only sends what changed, and history is kept", async () => {
+    it("rejects with a reason, keeps the details for reuse, and a retry sends only what changed (plus a new selfie)", async () => {
         const userId = await newUser();
         const theBvn = bvn(3);
+        verify.mockResolvedValueOnce(decision("rejected", "Your date of birth doesn't match your BVN."));
         const first = await submit(userId, { bvn: theBvn, ...values });
-        await decide(first.recordId!, userId, "rejected");
+        await expect(fetchUserKyc({ userId })).resolves.toMatchObject({ data: { status: "rejected", rejectionReason: "Your date of birth doesn't match your BVN." } });
 
-        const second = await submit(userId, { last_name: "Okafor-Eze" });
+        const second = await submit(userId, { date_of_birth: "1994-03-19" });
         expect(second.failure).toBeNull();
-        const { data } = await openUserKyc({ recordId: second.recordId!, purpose: "test" });
-        expect(data?.values).toEqual({ bvn: theBvn, ...values, last_name: "Okafor-Eze" });
-
-        const lastNames = (await fields(userId)).filter((field) => field.fieldKey === "last_name");
-        expect(lastNames).toHaveLength(2);
-        expect(lastNames[0].supersededAt).not.toBeNull();
-        // The first attempt still points at what it actually checked.
-        await expect(openUserKyc({ recordId: first.recordId!, purpose: "test" })).resolves.toMatchObject({ data: { values: { last_name: "Okafor" } } });
+        expect(verify).toHaveBeenLastCalledWith({ level: "bvn_selfie", values: expect.objectContaining({ bvn: theBvn, first_name: "Ada", date_of_birth: "1994-03-19" }) });
+        expect((await records(userId)).map((record) => record.status)).toEqual(["rejected", "verified"]);
+        await expect(openUserKyc({ recordId: first.recordId!, purpose: "test" })).resolves.toMatchObject({ data: { values: { date_of_birth: "1994-03-18" } } });
     });
 
-    it("allows one attempt in review, then none once verified at that level", async () => {
+    it("records nothing and removes the evidence when the verifier can't answer", async () => {
         const userId = await newUser();
-        const { recordId } = await submit(userId, { bvn: bvn(4), ...values });
-        await expect(submit(userId, { address: "1 New Road, Yaba" })).resolves.toMatchObject({ failure: "kyc_in_review" });
-        await decide(recordId!, userId, "verified");
-        await expect(fetchUserKyc({ userId })).resolves.toMatchObject({ data: { status: "verified", level: "bvn", recordId } });
-        await expect(submit(userId, { address: "1 New Road, Yaba" })).resolves.toMatchObject({ failure: "kyc_already_verified" });
+        verify.mockResolvedValueOnce(decision("unavailable"));
+        await expect(submit(userId, { bvn: bvn(4), ...values })).resolves.toMatchObject({ failure: "provider_unavailable" });
+        expect(await fields(userId)).toHaveLength(0);
+        expect(await records(userId)).toHaveLength(0);
+        expect(storage.remove).toHaveBeenCalledTimes(1);
     });
 
-    it("gives an identifier to one user, and rolls back everything when refused", async () => {
+    it("refuses another user's BVN before paying for a check; a rejection releases the BVN for its owner", async () => {
         const owner = await newUser();
-        const other = await newUser();
+        const intruder = await newUser();
         const shared = bvn(5);
-        await submit(owner, { bvn: shared, ...values });
-        await expect(submit(other, { ...values, bvn: shared })).resolves.toMatchObject({ failure: "kyc_identifier_in_use", fieldKey: "bvn" });
-        expect(await fields(other)).toHaveLength(0);
-        expect(await db.selectFrom("kyc_records").select("id").where("userId", "=", other).execute()).toHaveLength(0);
+        verify.mockResolvedValueOnce(decision("rejected", "Your name doesn't match your BVN."));
+        await submit(intruder, { bvn: shared, ...values });
+        await expect(submit(owner, { bvn: shared, ...values })).resolves.toMatchObject({ failure: null });
+
+        verify.mockClear();
+        await expect(submit(intruder, { bvn: shared, ...values })).resolves.toMatchObject({ failure: "kyc_identifier_in_use", fieldKey: "bvn" });
+        expect(verify).not.toHaveBeenCalled();
     });
 
-    it("audits every decrypt with its purpose and fields, before decrypting", async () => {
+    it("won't verify twice at the same level", async () => {
         const userId = await newUser();
-        const { recordId } = await submit(userId, { bvn: bvn(6), ...values });
-        await openUserKyc({ recordId: recordId!, purpose: "create_bank_account" });
-        const [audit] = await db.selectFrom("audit_logs").selectAll().where("entityId", "=", recordId!).where("action", "=", "kyc.decrypted").execute();
-        expect(audit.metadata).toMatchObject({ purpose: "create_bank_account", userId, fields: expect.arrayContaining(["bvn", "address"]) });
-        await expect(openUserKyc({ recordId: "00000000-0000-4000-8000-000000000000", purpose: "x" })).resolves.toEqual({ data: null });
+        await submit(userId, { bvn: bvn(6), ...values });
+        verify.mockClear();
+        await expect(submit(userId, { address: "1 New Road, Yaba" })).resolves.toMatchObject({ failure: "kyc_already_verified" });
+        expect(verify).not.toHaveBeenCalled();
     });
 
     it("refuses edits to stored values, links, and backwards status changes", async () => {
@@ -110,9 +128,6 @@ run("KYC against Postgres", () => {
         const [field] = await fields(userId);
         await expect(db.updateTable("kyc_fields").set({ valueEnc: "g1.x.y.z" }).where("id", "=", field.id).execute()).rejects.toThrow(/append-only/);
         await expect(db.updateTable("kyc_record_fields").set({ fieldKey: "x" }).where("recordId", "=", recordId!).execute()).rejects.toThrow(/insert-only/);
-        await decide(recordId!, userId, "verified");
-        await expect(
-            db.updateTable("kyc_records").set({ status: "pending", decidedAt: null, decidedBy: null }).where("id", "=", recordId!).execute(),
-        ).rejects.toThrow(/cannot go from verified to pending/);
+        await expect(db.updateTable("kyc_records").set({ status: "rejected", rejectionReason: "x" }).where("id", "=", recordId!).execute()).rejects.toThrow(/cannot go from verified to rejected/);
     });
 });

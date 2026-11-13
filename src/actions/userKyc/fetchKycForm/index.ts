@@ -1,6 +1,6 @@
 import fetchCurrentKycFields from "@/actions/kycFields/fetchCurrentKycFields";
 import selectProfileNames from "./queries/selectProfileNames";
-import { KYC_LEVEL } from "@/constants/kyc";
+import { DEFAULT_KYC_LEVEL } from "@/constants/kyc";
 import { KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
 
 /**
@@ -9,13 +9,13 @@ import { KYC_FIELDS, KYC_FORMS } from "@/constants/kycFields";
  * `onFile` (the user may leave them out and they're reused); identifiers show
  * only a masked hint. Never returns a stored value.
  */
-const fetchKycForm = async ({ userId, level = KYC_LEVEL.BVN }: { userId: string; level?: string }) => {
+const fetchKycForm = async ({ userId, level = DEFAULT_KYC_LEVEL }: { userId: string; level?: string }) => {
     const form = KYC_FORMS[level];
     const [{ data: onFile }, profile] = await Promise.all([fetchCurrentKycFields({ userId }), selectProfileNames({ userId })]);
 
     const fields = [...form.required, ...form.optional].map((key) => {
-        const { identifier: _identifier, displayHint: _displayHint, prefill, ...definition } = KYC_FIELDS[key];
-        const saved = onFile.get(key);
+        const { identifier: _identifier, displayHint: _displayHint, prefill, fresh, storedAsFile: _storedAsFile, ...definition } = KYC_FIELDS[key];
+        const saved = fresh ? undefined : onFile.get(key);
         return {
             ...definition,
             required: form.required.includes(key),

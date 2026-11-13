@@ -8,8 +8,9 @@ import selectCurrentKycFields from "./queries/selectCurrentKycFields";
  * Values stay encrypted; only ids and safe display hints come back.
  */
 const fetchCurrentKycFields = async ({ userId, trx }: { userId: string; trx?: Kysely<Database> }) => {
-    const rows = await selectCurrentKycFields({ userId, trx });
-    return { data: new Map(rows.map((row) => [row.fieldKey, row])) };
+    // lookup_index is CHAR(64): the type generator can't name it, so it's typed here.
+    const rows = (await selectCurrentKycFields({ userId, trx })).map((row) => ({ ...row, lookupIndex: row.lookupIndex as string | null }));
+    return { data: new Map<string, (typeof rows)[number]>(rows.map((row) => [row.fieldKey, row])) };
 };
 
 export default fetchCurrentKycFields;

@@ -2,6 +2,7 @@ import { z } from "zod";
 import personNameSchema from "@/utils/validation/personNameSchema";
 import isIsoDate from "@/utils/kyc/isIsoDate";
 import ageOn from "@/utils/kyc/ageOn";
+import parseImageDataUri from "@/utils/kyc/parseImageDataUri";
 import { KYC_FIELD_TYPE, KycFieldDefinition } from "@/constants/kycFields";
 
 const tidy = (value: string) => value.normalize("NFC").trim().replace(/\s+/g, " ");
@@ -35,6 +36,10 @@ const kycValueSchema = (field: KycFieldDefinition): z.ZodType<string, z.ZodTypeD
             const allowed = (field.options ?? []).map((option) => option.value);
             return z.string(required).refine((value) => allowed.includes(value), `Choose your ${field.label.toLowerCase()}`);
         }
+        case KYC_FIELD_TYPE.SELFIE:
+            return z
+                .string({ required_error: "Take a selfie", invalid_type_error: "Take a selfie" })
+                .refine((value) => parseImageDataUri({ value, maxBytes: field.maxBytes ?? 1_500_000 }) !== null, "Take your selfie again — that photo couldn't be used");
         case KYC_FIELD_TYPE.TEXT:
             return z
                 .string(required)

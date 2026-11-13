@@ -11,6 +11,8 @@ export const KYC_FIELD_TYPE = {
     DATE: "date",
     CHOICE: "choice",
     TEXT: "text",
+    /** A photo of the user's face, taken in the app with the front camera (JPEG/PNG data URI). */
+    SELFIE: "selfie",
 } as const;
 
 export type KycFieldType = (typeof KYC_FIELD_TYPE)[keyof typeof KYC_FIELD_TYPE];
@@ -36,6 +38,12 @@ export interface KycFieldDefinition {
     displayHint?: "last4";
     /** Profile field the app may pre-fill from, when nothing is on file. */
     prefill?: "firstName" | "middleName" | "lastName";
+    /** Never reused: every attempt must send a new one (e.g. a selfie). */
+    fresh?: boolean;
+    /** Kept as an encrypted file in file storage; the field holds an encrypted pointer to it. */
+    storedAsFile?: boolean;
+    /** `selfie`: largest accepted image, in bytes. */
+    maxBytes?: number;
 }
 
 export const KYC_FIELDS: Record<string, KycFieldDefinition> = {
@@ -63,9 +71,19 @@ export const KYC_FIELDS: Record<string, KycFieldDefinition> = {
         ],
     },
     address: { key: "address", type: KYC_FIELD_TYPE.TEXT, label: "Home address", hint: null, minLength: 5, maxLength: 200 },
+    selfie: {
+        key: "selfie",
+        type: KYC_FIELD_TYPE.SELFIE,
+        label: "Selfie",
+        hint: "Take a clear photo of your face in good light, without glasses or a cap. We match it to your BVN photo.",
+        fresh: true,
+        storedAsFile: true,
+        maxBytes: 1_500_000,
+    },
 };
 
 /** What each verification level asks for. */
 export const KYC_FORMS: Record<string, { required: string[]; optional: string[] }> = {
     bvn: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address"], optional: ["middle_name"] },
+    bvn_selfie: { required: ["bvn", "first_name", "last_name", "date_of_birth", "gender", "address", "selfie"], optional: ["middle_name"] },
 };

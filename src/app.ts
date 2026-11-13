@@ -38,6 +38,9 @@ class App {
 
     private initializeMiddlewares(): void {
         this.express.use(cors(corsOptions));
+        // KYC submissions carry a selfie (≤1.5 MB as base64): a larger body
+        // limit for that one route only; everything else keeps the 100 KB default.
+        this.express.use(`/api/${process.env.API_VERSION || "v1"}/app/user/kyc`, express.json({ limit: "2.5mb" }));
         this.express.use(express.json());
         this.express.use(helmet());
         this.express.use(helmet.xssFilter());
