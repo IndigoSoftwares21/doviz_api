@@ -1,6 +1,6 @@
 import monitoring from "@/utils/monitoring";
 import getKycKeyring from "./getKycKeyring";
-import bvnIndex from "./bvnIndex";
+import kycLookupIndex from "./kycLookupIndex";
 
 /**
  * Startup check: loads the KYC keys once so a missing or malformed key is
@@ -9,7 +9,7 @@ import bvnIndex from "./bvnIndex";
 const checkKycKeys = () => {
     try {
         getKycKeyring();
-        bvnIndex({ bvn: "00000000000" });
+        kycLookupIndex({ fieldKey: "bvn", value: "00000000000" });
         return true;
     } catch (error) {
         monitoring.warn(`KYC keys are not usable — identity verification is disabled: ${(error as Error).message}`);

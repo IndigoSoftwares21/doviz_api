@@ -401,10 +401,30 @@ export interface Database {
     isLocked: ColumnType<number | null>;
   };
 
-  kyc_bvn_claims: {
-    bvnIndex: ColumnType<unknown>;
+  kyc_fields: {
+    id: ColumnType<string>;
+    userId: ColumnType<string>;
+    fieldKey: ColumnType<string>;
+    keyVersion: ColumnType<number>;
+    wrappedKey: ColumnType<string>;
+    valueEnc: ColumnType<string>;
+    lookupIndex: ColumnType<unknown | null>;
+    displayHint: ColumnType<string | null>;
+    createdAt: Generated<Date>;
+    supersededAt: ColumnType<Date | null>;
+  };
+
+  kyc_identifier_claims: {
+    fieldKey: ColumnType<string>;
+    lookupIndex: ColumnType<unknown>;
     userId: ColumnType<string>;
     createdAt: Generated<Date>;
+  };
+
+  kyc_record_fields: {
+    recordId: ColumnType<string>;
+    fieldId: ColumnType<string>;
+    fieldKey: ColumnType<string>;
   };
 
   kyc_records: {
@@ -412,17 +432,6 @@ export interface Database {
     userId: ColumnType<string>;
     status: ColumnType<string>;
     level: ColumnType<string>;
-    bvnIndex: ColumnType<unknown>;
-    bvnLast4: ColumnType<unknown>;
-    keyVersion: ColumnType<number>;
-    wrappedKey: ColumnType<string>;
-    bvnEnc: ColumnType<string>;
-    firstNameEnc: ColumnType<string>;
-    middleNameEnc: ColumnType<string | null>;
-    lastNameEnc: ColumnType<string>;
-    dateOfBirthEnc: ColumnType<string>;
-    genderEnc: ColumnType<string>;
-    addressEnc: ColumnType<string>;
     rejectionReason: ColumnType<string | null>;
     decidedBy: ColumnType<string | null>;
     submittedAt: Generated<Date>;

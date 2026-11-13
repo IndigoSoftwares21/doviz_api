@@ -1,31 +1,19 @@
 import { Kysely } from "kysely";
 import { Database } from "@/database/types";
-import { SealedKyc } from "@/services/kycVault/types";
-import { KYC_STATUS, KycLevel } from "@/constants/kyc";
+import { KYC_STATUS } from "@/constants/kyc";
 
-/** A new submission, in review. Its personal fields can never be changed after this. */
-const insertKycRecord = async ({
-    trx,
-    userId,
-    sealed,
-    bvnIndex,
-    bvnLast4,
-    level,
-}: {
-    trx: Kysely<Database>;
-    userId: string;
-    sealed: SealedKyc;
-    bvnIndex: string;
-    bvnLast4: string;
-    level: KycLevel;
-}) => {
-    const recordRow = await trx
+/** A new verification attempt, in review, linked to exactly the field rows it will check. */
+const insertKycRecord = async ({ trx, userId, level, fields }: { trx: Kysely<Database>; userId: string; level: string; fields: { fieldKey: string; id: string }[] }) => {
+    const record = await trx
         .insertInto("kyc_records")
-        .values({ userId, status: KYC_STATUS.PENDING, level, bvnIndex, bvnLast4, ...sealed })
+        .values({ userId, status: KYC_STATUS.PENDING, level })
         .returning(["id"])
         .executeTakeFirstOrThrow();
-
-    return recordRow;
+    await trx
+        .insertInto("kyc_record_fields")
+        .values(fields.map(({ fieldKey, id }) => ({ recordId: record.id, fieldId: id, fieldKey })))
+        .execute();
+    return record;
 };
 
 export default insertKycRecord;

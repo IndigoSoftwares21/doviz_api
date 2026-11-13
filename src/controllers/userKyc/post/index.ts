@@ -8,20 +8,22 @@ import postUserKycSchema from "./schema/postUserKycSchema";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import { KYC_MESSAGES } from "@/constants/kyc";
+import { KYC_FIELDS } from "@/constants/kycFields";
 
 // Reads only the fields it needs. Nothing personal is logged or echoed back —
-// the response is the masked summary.
+// the response is the masked status.
 const postUserKyc = async (req: Request, res: Response) => {
     try {
-        const { bvn, firstName, middleName, lastName, dateOfBirth, gender, address, pin } = req.body ?? {};
+        const { level, details, pin } = req.body ?? {};
         const { id: userId } = req.user!;
 
-        const { pin: validPin, ...details } = await postUserKycSchema.parseAsync({ bvn, firstName, middleName, lastName, dateOfBirth, gender, address, pin });
+        const validated = await postUserKycSchema.parseAsync({ userId, level, details, pin });
 
-        const { failure, verification } = await createUserKyc({
+        const { failure, fieldKey, verification } = await createUserKyc({
             userId,
-            details,
-            pin: validPin,
+            level: validated.level,
+            values: validated.values,
+            pin: validated.pin,
             ipAddress: req.ip ?? null,
             userAgent: req.get("user-agent")?.slice(0, 512) ?? null,
         });
@@ -30,7 +32,9 @@ const postUserKyc = async (req: Request, res: Response) => {
         if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return handlePinFailure({ res, req, verification });
         if (failure === ACTION_FAILURE.KYC_ALREADY_VERIFIED) return handleError({ res, req, message: KYC_MESSAGES.ALREADY_VERIFIED, code: 409 });
         if (failure === ACTION_FAILURE.KYC_IN_REVIEW) return handleError({ res, req, message: KYC_MESSAGES.IN_REVIEW, code: 409 });
-        if (failure === ACTION_FAILURE.KYC_BVN_IN_USE) return handleError({ res, req, message: KYC_MESSAGES.BVN_IN_USE, code: 409 });
+        if (failure === ACTION_FAILURE.KYC_IDENTIFIER_IN_USE) {
+            return handleError({ res, req, message: KYC_MESSAGES.identifierInUse(KYC_FIELDS[fieldKey!]?.label ?? "detail"), code: 409 });
+        }
 
         const { data } = await fetchUserKyc({ userId });
         return handleSuccess({ res, req, message: "Details received", code: 201, data });
