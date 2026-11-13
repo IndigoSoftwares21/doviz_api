@@ -1,5 +1,7 @@
 import createBillCustomerValidation from "@/actions/billCustomerValidation/createBillCustomerValidation";
 import selectValidationProduct from "@/actions/billCustomerValidation/createBillCustomerValidation/queries/selectValidationProduct";
+import selectRecentCustomerCheck from "@/actions/billCustomerCheck/fetchBillCustomer/queries/selectRecentCustomerCheck";
+import upsertCustomerCheck from "@/actions/billCustomerCheck/fetchBillCustomer/queries/upsertCustomerCheck";
 import billProviderRegistry from "@/services/bills/billProviderRegistry";
 import BillProviderError from "@/services/bills/billProviderError";
 import ACTION_FAILURE from "@/constants/actionFailure";
@@ -7,6 +9,8 @@ import { makeFakeBillProvider } from "./fakeBillProvider";
 
 jest.mock("@/database", () => ({ db: {} }));
 jest.mock("@/actions/billCustomerValidation/createBillCustomerValidation/queries/selectValidationProduct");
+jest.mock("@/actions/billCustomerCheck/fetchBillCustomer/queries/selectRecentCustomerCheck");
+jest.mock("@/actions/billCustomerCheck/fetchBillCustomer/queries/upsertCustomerCheck");
 
 const PRODUCT_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 
@@ -20,7 +24,9 @@ describe("createBillCustomerValidation", () => {
         billProviderRegistry.reset();
         billProviderRegistry.register(makeFakeBillProvider({ validateCustomer }));
         process.env.BILLS_PROVIDER = "fakebills";
-        jest.mocked(selectValidationProduct).mockResolvedValue({ providerProductRef: "ref-1", requiresValidation: true });
+        jest.mocked(selectValidationProduct).mockResolvedValue({ providerProductRef: "ref-1", providerFee: "0.00", requiresValidation: true });
+        jest.mocked(selectRecentCustomerCheck).mockResolvedValue(null);
+        jest.mocked(upsertCustomerCheck).mockResolvedValue(undefined);
     });
 
     afterAll(() => {
@@ -37,8 +43,31 @@ describe("createBillCustomerValidation", () => {
         expect(validateCustomer).toHaveBeenCalledWith({ providerProductRef: "ref-1", customerId: "45067198783" });
     });
 
+    it("adds the provider's fee to the customer's minimum", async () => {
+        jest.mocked(selectValidationProduct).mockResolvedValue({ providerProductRef: "ref-1", providerFee: "100.00", requiresValidation: true });
+        validateCustomer.mockResolvedValue({ customerName: "ADA", address: null, minAmount: "900.00", maxAmount: "1000000.00" });
+        await expect(run()).resolves.toEqual({ data: { customerName: "ADA", address: null, minAmount: "1000.00", maxAmount: "1000000.00" }, failure: null });
+    });
+
+    it("remembers a successful check, and reuses a recent one instead of asking the provider again", async () => {
+        validateCustomer.mockResolvedValue({ customerName: "ADA", address: null, minAmount: null, maxAmount: null });
+        await run();
+        expect(upsertCustomerCheck).toHaveBeenCalledWith({ productId: PRODUCT_ID, customerId: "45067198783", customer: expect.objectContaining({ customerName: "ADA" }) });
+
+        validateCustomer.mockReset();
+        jest.mocked(selectRecentCustomerCheck).mockResolvedValue({ customerName: "ADA", address: null, minAmount: "900.00", maxAmount: null });
+        await expect(run()).resolves.toMatchObject({ data: { customerName: "ADA", minAmount: "900.00" }, failure: null });
+        expect(validateCustomer).not.toHaveBeenCalled();
+    });
+
+    it("never remembers a failed check", async () => {
+        validateCustomer.mockRejectedValue(new BillProviderError({ code: "rejected", status: 400, providerMessage: "x" }));
+        await run();
+        expect(upsertCustomerCheck).not.toHaveBeenCalled();
+    });
+
     it("skips the provider for billers that don't need validation", async () => {
-        jest.mocked(selectValidationProduct).mockResolvedValue({ providerProductRef: "ref-1", requiresValidation: false });
+        jest.mocked(selectValidationProduct).mockResolvedValue({ providerProductRef: "ref-1", providerFee: "0.00", requiresValidation: false });
         await expect(run()).resolves.toEqual({ data: { customerName: null, address: null, minAmount: null, maxAmount: null }, failure: null });
         expect(validateCustomer).not.toHaveBeenCalled();
     });

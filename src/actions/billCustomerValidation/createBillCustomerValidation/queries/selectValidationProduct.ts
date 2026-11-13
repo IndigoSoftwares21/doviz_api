@@ -6,7 +6,7 @@ const selectValidationProduct = async ({ productId }: { productId: string }) => 
         .selectFrom("bill_products")
         .innerJoin("biller_provider_refs", "biller_provider_refs.id", "bill_products.billerProviderRefId")
         .innerJoin("billers", "billers.id", "biller_provider_refs.billerId")
-        .select(["bill_products.providerProductRef", "billers.requiresValidation"])
+        .select(["bill_products.providerProductRef", "bill_products.providerFee", "billers.requiresValidation"])
         .where("bill_products.id", "=", productId)
         .executeTakeFirstOrThrow();
 

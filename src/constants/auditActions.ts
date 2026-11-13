@@ -53,6 +53,9 @@ const AUDIT_ACTIONS = {
     BIOMETRIC_DISABLED: "security.biometric.disabled",
     BIOMETRIC_VERIFIED: "security.biometric.verified",
     BIOMETRIC_VERIFICATION_FAILED: "security.biometric.verification_failed",
+    KYC_SUBMITTED: "kyc.submitted",
+    /** Someone's KYC was decrypted — every read of the raw data, with its purpose. */
+    KYC_DECRYPTED: "kyc.decrypted",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

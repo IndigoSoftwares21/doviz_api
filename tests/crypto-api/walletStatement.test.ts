@@ -27,12 +27,12 @@ const entry = (id: string) => ({
     id, amount: "156000.00", balanceAfter: "156000.00", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.CRYPTO_DEPOSIT,
     depositId: "dep-1", symbol: "USDT", network: "TRC20", cryptoAmount: "100.000000",
     grossNgn: "157560.00", markupNgn: "1560.00", markupPercent: "1.00", ...noTransfer,
-    billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null,
+    billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null, billToken: null,
 });
 const billEntry = (id: string) => ({
     ...entry(id), amount: "-1000.00", type: LEDGER_TRANSACTION_TYPE.BILL_HOLD,
     depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null,
-    billPaymentId: "bill-1", billCategory: BILL_CATEGORY.DATA, billerName: "MTN", billProductName: "1.5GB - 30 days", billCustomerId: "08031234567",
+    billPaymentId: "bill-1", billCategory: BILL_CATEGORY.DATA, billerName: "MTN", billProductName: "1.5GB - 30 days", billCustomerId: "08031234567", billToken: null,
 });
 
 const noBankTransfer = { nairaDepositId: null, senderName: null, senderBankName: null, senderAccountNumber: null };
@@ -60,7 +60,7 @@ describe("wallet statement routes", () => {
             direction: "debit",
             description: "Data purchase",
             deposit: null,
-            bill: { id: "bill-1", category: "data", billerName: "MTN", productName: "1.5GB - 30 days", customerId: "08031234567" },
+            bill: { id: "bill-1", category: "data", billerName: "MTN", productName: "1.5GB - 30 days", customerId: "08031234567", token: null },
         });
     });
 

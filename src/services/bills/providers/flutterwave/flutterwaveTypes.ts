@@ -31,6 +31,8 @@ export interface FlutterwaveBillerItem {
     country: string;
     label_name: string | null;
     amount: number;
+    /** Flutterwave's charge to us per payment, on top of the amount (e.g. 100 on AEDC prepaid). */
+    fee?: number | null;
     validity_period?: string | number | null;
 }
 

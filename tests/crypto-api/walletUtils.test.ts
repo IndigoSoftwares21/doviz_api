@@ -7,7 +7,7 @@ import { ENTRY_DIRECTION, LEDGER_TRANSACTION_TYPE } from "@/constants/ledger";
 
 const ENTRY = "6f1c2a4e-8b3d-4c5e-9f7a-1b2c3d4e5f60";
 const row = { id: ENTRY, amount: "-5000.5", balanceAfter: "100", createdAt: new Date(), type: LEDGER_TRANSACTION_TYPE.WITHDRAWAL_HOLD,
-    depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null, billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null };
+    depositId: null, symbol: null, network: null, cryptoAmount: null, grossNgn: null, markupNgn: null, markupPercent: null, billPaymentId: null, billCategory: null, billerName: null, billProductName: null, billCustomerId: null, billToken: null };
 
 describe("statement cursor", () => {
     it("round-trips an entry id", () => {

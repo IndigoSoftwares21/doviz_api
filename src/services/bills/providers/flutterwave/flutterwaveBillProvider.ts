@@ -27,6 +27,29 @@ const isNotFound = (error: unknown) =>
     error instanceof BillProviderError &&
     (error.code === BILL_PROVIDER_ERROR_CODE.NOT_FOUND || /not found/i.test(error.providerMessage ?? ""));
 
+/**
+ * GET /bills/:ref for a payment the biller refused: 400 {"status":"error","message":"FAILED","data":null}
+ * (seen live, ₦900 AEDC prepaid, 2026-11-12). Exactly "FAILED" — any other error stays unknown.
+ */
+const isFailedBill = (error: unknown) =>
+    error instanceof BillProviderError && error.code === BILL_PROVIDER_ERROR_CODE.REJECTED && /^failed$/i.test((error.providerMessage ?? "").trim());
+
+const failedBill = ({ externalId, providerReference }: { externalId: string; providerReference: string | null }): ProviderBillPayment => ({
+    externalId,
+    providerReference,
+    status: PROVIDER_BILL_STATUS.FAILED,
+    amount: { amount: "0.00", currency: FLUTTERWAVE.COUNTRY_CURRENCY[FLUTTERWAVE.COUNTRY] },
+    cost: null,
+    token: null,
+    failureReason: "Failed at provider",
+});
+
+/** A refusal that may just be Flutterwave's flaky check ("Item validation failed" / "Failed"), not a wrong number. */
+const isFlakyValidation = (error: unknown) =>
+    error instanceof BillProviderError &&
+    error.code === BILL_PROVIDER_ERROR_CODE.REJECTED &&
+    /^(item validation failed|failed)$/i.test((error.providerMessage ?? "").trim());
+
 /** Flutterwave (v3) behind the neutral BillProvider interface. Quirks stay in this folder. */
 class FlutterwaveBillProvider implements BillProvider {
     readonly name = FLUTTERWAVE.PROVIDER_NAME;
@@ -77,7 +100,23 @@ class FlutterwaveBillProvider implements BillProvider {
         return mapFlutterwaveBillerCatalog({ groups });
     }
 
+    /**
+     * Flutterwave answers "Item validation failed" (code FE) both for a wrong
+     * number AND for a real one checked again within ~5–15s of a successful
+     * check (seen live on AEDC, 2026-11-12). Callers reuse a recent success
+     * (fetchBillCustomer) so that window is rarely hit; one retry covers blips.
+     */
     async validateCustomer({ providerProductRef, customerId }: { providerProductRef: string; customerId: string }): Promise<ProviderCustomer> {
+        for (let attempt = 1; ; attempt += 1) {
+            try {
+                return await this.validateCustomerOnce({ providerProductRef, customerId });
+            } catch (error) {
+                if (attempt >= FLUTTERWAVE.VALIDATE_ATTEMPTS || !isFlakyValidation(error)) throw error;
+            }
+        }
+    }
+
+    private async validateCustomerOnce({ providerProductRef, customerId }: { providerProductRef: string; customerId: string }): Promise<ProviderCustomer> {
         const { billerCode, itemCode } = parseFlutterwaveProductRef({ providerProductRef });
         const result = await this.client.request<FlutterwaveCustomerValidation>({
             method: "GET",
@@ -157,6 +196,8 @@ class FlutterwaveBillProvider implements BillProvider {
                 });
                 if (record) return mapFlutterwaveBillPayment({ externalId, record, requestedAmount: "0.00" });
             } catch (error) {
+                // Flutterwave answers a payment that failed at the biller with an error, not a record.
+                if (isFailedBill(error)) return failedBill({ externalId, providerReference });
                 if (!isNotFound(error)) throw error;
             }
         }

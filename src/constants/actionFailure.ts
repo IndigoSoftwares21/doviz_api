@@ -24,6 +24,9 @@ const ACTION_FAILURE = {
     RECIPIENT_UNAVAILABLE: "recipient_unavailable",
     TRANSFER_LIMIT: "transfer_limit",
     ACCOUNT_INACTIVE: "account_inactive",
+    KYC_ALREADY_VERIFIED: "kyc_already_verified",
+    KYC_IN_REVIEW: "kyc_in_review",
+    KYC_BVN_IN_USE: "kyc_bvn_in_use",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

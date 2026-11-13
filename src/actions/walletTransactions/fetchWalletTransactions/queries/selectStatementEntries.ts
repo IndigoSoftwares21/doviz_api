@@ -72,6 +72,7 @@ const selectStatementEntries = async ({
             "billers.name as billerName",
             "bill_products.name as billProductName",
             "bill_payments.customerId as billCustomerId",
+            "bill_payments.token as billToken",
         ])
         .where("ledger_accounts.kind", "=", LEDGER_ACCOUNT_KIND.USER_AVAILABLE)
         .where("ledger_accounts.userId", "=", userId);

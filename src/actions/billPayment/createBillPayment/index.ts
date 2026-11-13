@@ -16,6 +16,7 @@ import monitoring from "@/utils/monitoring";
 import isInsufficientBalanceError from "@/utils/ledger/isInsufficientBalanceError";
 import isIdempotencyConflictError from "./utils/isIdempotencyConflictError";
 import checkPaymentCustomer from "./utils/checkPaymentCustomer";
+import billFee from "@/utils/bills/billFee";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import AUDIT_ACTIONS from "@/constants/auditActions";
@@ -60,11 +61,14 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
 
     const product = await selectPaymentProduct({ productId });
     const chargeAmount = new Decimal(product.amountType === BILL_AMOUNT_TYPE.FIXED ? product.price! : amount!).toFixed(2);
-    const total = new Decimal(chargeAmount).plus(product.serviceFee).toFixed(2);
+    const fee = billFee({ providerFee: product.providerFee, serviceFee: product.serviceFee });
+    const total = new Decimal(chargeAmount).plus(fee).toFixed(2);
 
     const check = await checkPaymentCustomer({
         provider: product.provider,
+        productId,
         providerProductRef: product.providerProductRef,
+        providerFee: product.providerFee,
         requiresValidation: product.requiresValidation,
         customerId,
         amount: chargeAmount,
@@ -100,7 +104,7 @@ const createBillPayment = async ({ userId, productId, customerId, amount, idempo
                 customerName: check.customerName,
                 currency: product.currency,
                 amount: chargeAmount,
-                serviceFee: product.serviceFee,
+                serviceFee: fee,
                 total,
                 holdLedgerTransactionId: hold.transactionId,
             });

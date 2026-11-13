@@ -38,6 +38,7 @@ const statementLine = (deposit: Record<string, unknown>) => ({
                 billerName: { type: ["string", "null"], example: "MTN" },
                 productName: { type: ["string", "null"], example: "1.5GB - 30 days" },
                 customerId: { type: ["string", "null"], example: "08031234567", description: "Phone, meter or smartcard number." },
+                token: { type: ["string", "null"], example: "1234-5678-9012-3456-7890", description: "Prepaid electricity token to enter on the meter; null until the bill completes, and for anything that has none." },
             },
         },
     },

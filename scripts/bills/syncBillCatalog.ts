@@ -123,6 +123,7 @@ const syncBillCatalog = async ({ provider }: { provider: BillProvider }) => {
                 price: product.price,
                 minAmount,
                 maxAmount,
+                providerFee: product.providerFee ?? "0.00",
                 validityDays: product.validityDays ?? parseValidityDays({ name: product.name }),
                 isAvailable: true,
                 syncedAt: now,

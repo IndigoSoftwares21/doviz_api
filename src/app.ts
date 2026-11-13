@@ -1,3 +1,4 @@
+import checkKycKeys from "@/services/kycVault/checkKycKeys";
 import express from "express";
 import type { Server } from "http";
 import { disconnect } from "@/database";
@@ -75,6 +76,7 @@ class App {
         registerCollectionProviders();
         registerPayoutProviders();
         registerCryptoSendProviders();
+        checkKycKeys();
         
         const apiVersion = process.env.API_VERSION || 'v1';
         

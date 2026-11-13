@@ -46,6 +46,7 @@ const mapFlutterwaveCatalog = ({ items }: { items: FlutterwaveBillItem[] }): Pro
             price,
             minAmount: null,
             maxAmount: null,
+            providerFee: toFlutterwaveMoney({ value: item.fee }),
             validityDays: parseFlutterwaveValidity({ value: item.validity_period }),
         });
     }

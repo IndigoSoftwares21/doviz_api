@@ -21,6 +21,8 @@ interface StatementRow extends StatementTransferRow {
     billerName: string | null;
     billProductName: string | null;
     billCustomerId: string | null;
+    /** Prepaid electricity token / PIN, once the bill completes. */
+    billToken: string | null;
 }
 
 /** One statement line: absolute amount + direction, balance after, and its source (deposit or bill). */
@@ -61,6 +63,7 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
                   billerName: row.billerName,
                   productName: row.billProductName,
                   customerId: row.billCustomerId,
+                  token: row.billToken,
               }
             : null,
         /** A Ziks-to-Ziks transfer: who it was with (as on the transfer). */

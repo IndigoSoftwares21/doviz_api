@@ -1,6 +1,8 @@
 import billProviderRegistry from "@/services/bills/billProviderRegistry";
 import BillProviderError from "@/services/bills/billProviderError";
 import monitoring from "@/utils/monitoring";
+import fetchBillCustomer from "@/actions/billCustomerCheck/fetchBillCustomer";
+import billCustomerMinimum from "@/utils/bills/billCustomerMinimum";
 import selectValidationProduct from "./queries/selectValidationProduct";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import { BILL_PROVIDER_ERROR_CODE } from "@/constants/bills";
@@ -20,8 +22,9 @@ const createBillCustomerValidation = async ({ productId, customerId }: { product
     }
 
     try {
-        const customer = await provider.validateCustomer({ providerProductRef: product.providerProductRef, customerId });
-        return { data: customer, failure: null };
+        const customer = await fetchBillCustomer({ provider: provider.name, productId, providerProductRef: product.providerProductRef, customerId });
+        const minAmount = billCustomerMinimum({ minAmount: customer.minAmount, providerFee: product.providerFee });
+        return { data: { ...customer, minAmount }, failure: null };
     } catch (error) {
         const code = error instanceof BillProviderError ? error.code : null;
         if (code === BILL_PROVIDER_ERROR_CODE.REJECTED || code === BILL_PROVIDER_ERROR_CODE.NOT_FOUND) {

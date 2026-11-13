@@ -13,6 +13,7 @@ const selectPaymentProduct = async ({ productId }: { productId: string }) => {
             "bill_products.currency",
             "bill_products.price",
             "bill_products.serviceFee",
+            "bill_products.providerFee",
             "billers.id as billerId",
             "billers.name as billerName",
             "billers.requiresValidation",

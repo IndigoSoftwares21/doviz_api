@@ -1,3 +1,5 @@
+import Decimal from "decimal.js";
+import createBillCustomerValidation from "@/actions/billCustomerValidation/createBillCustomerValidation";
 /**
  * Real-Postgres check of the bill payment money path (skipped by default).
  * Run against a DISPOSABLE, fully migrated database — money rows can't be deleted:
@@ -82,24 +84,25 @@ run("bill payments against Postgres", () => {
 
         bundleId = (await db.insertInto("bill_products").values({
             billerProviderRefId: await ref("mtn-data"), provider, environment: "sandbox", providerProductRef: `BIL104:MD107-${tag}`,
-            providerName: "MTN 1.5 GB", name: "1.5GB", amountType: "fixed", currency: "NGN", price: "1000.00", serviceFee: "50.00", isAvailable: true, isEnabled: true,
+            providerName: "MTN 1.5 GB", name: "1.5GB", amountType: "fixed", currency: "NGN", price: "1000.00", serviceFee: "50.00", providerFee: "0.00", isAvailable: true, isEnabled: true,
         }).returning(["id"]).executeTakeFirstOrThrow()).id;
         airtimeId = (await db.insertInto("bill_products").values({
             billerProviderRefId: await ref("mtn-airtime"), provider, environment: "sandbox", providerProductRef: `BIL099:AT099-${tag}`,
-            providerName: "AIRTIME", name: "Airtime", amountType: "range", currency: "NGN", minAmount: "50.00", maxAmount: "50000.00", serviceFee: "0.00", isAvailable: true, isEnabled: true,
+            providerName: "AIRTIME", name: "Airtime", amountType: "range", currency: "NGN", minAmount: "50.00", maxAmount: "50000.00", serviceFee: "0.00", providerFee: "0.00", isAvailable: true, isEnabled: true,
         }).returning(["id"]).executeTakeFirstOrThrow()).id;
 
         prepaidId = (await db.insertInto("bill_products").values({
             billerProviderRefId: await ref("ikeja-electric"), provider, environment: "sandbox", providerProductRef: `BIL113:UB159-${tag}`,
             providerName: "IKEDC PREPAID", name: "Prepaid", amountType: "range", currency: "NGN", minAmount: "500.00", maxAmount: "500000.00",
-            serviceFee: "0.00", isAvailable: true, isEnabled: true,
+            serviceFee: "0.00", providerFee: "100.00", isAvailable: true, isEnabled: true,
         }).returning(["id"]).executeTakeFirstOrThrow()).id;
 
         billProviderRegistry.reset();
         billProviderRegistry.register(makeFakeBillProvider({ name: provider, payBill, getBillPayment, validateCustomer }));
     });
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        await db.deleteFrom("bill_customer_checks").execute();
         payBill.mockReset();
         getBillPayment.mockReset();
         validateCustomer.mockReset();
@@ -209,6 +212,33 @@ run("bill payments against Postgres", () => {
             expect(data).toMatchObject({ status: "pending", customerName: "ADA OKAFOR" });
         });
 
+        it("passes the provider's fee to the user, so the bill never costs Ziks money", async () => {
+            validateCustomer.mockResolvedValue({ customerName: "ADA OKAFOR", address: null, minAmount: null, maxAmount: null });
+            payBill.mockImplementation(async ({ externalId }) => billPaymentRecord({ externalId, providerReference: "CF-FEE" }));
+            const before = await userBalance();
+
+            const { data } = await pay(meter);
+            expect(data).toMatchObject({ amount: "1000.00", serviceFee: "100.00", total: "1100.00" });
+            expect(payBill).toHaveBeenCalledWith(expect.objectContaining({ amount: { amount: "1000.00", currency: "NGN" } }));
+            expect(await userBalance()).toBe(new Decimal(before).minus("1100.00").toFixed(2));
+        });
+
+        it("pays a meter checked moments ago even if the provider's check now fails", async () => {
+            validateCustomer.mockResolvedValueOnce({ customerName: "ADA OKAFOR", address: null, minAmount: null, maxAmount: null });
+            const active = process.env.BILLS_PROVIDER;
+            process.env.BILLS_PROVIDER = provider;
+            await createBillCustomerValidation({ productId: prepaidId, customerId: meter.customerId });
+            if (active === undefined) delete process.env.BILLS_PROVIDER;
+            else process.env.BILLS_PROVIDER = active;
+            validateCustomer.mockRejectedValue(new BillProviderError({ code: "rejected", status: 400, providerMessage: "Item validation failed" }));
+            payBill.mockImplementation(async ({ externalId }) => billPaymentRecord({ externalId, providerReference: "CF-AGAIN" }));
+
+            const { data, failure } = await pay(meter);
+            expect(failure).toBeNull();
+            expect(data).toMatchObject({ status: "pending", customerName: "ADA OKAFOR" });
+            expect(validateCustomer).toHaveBeenCalledTimes(1);
+        });
+
         it("refuses an unknown meter without touching the balance", async () => {
             validateCustomer.mockRejectedValue(new BillProviderError({ code: "rejected", status: 400, providerMessage: "Invalid meter" }));
             const before = await userBalance();
@@ -219,12 +249,12 @@ run("bill payments against Postgres", () => {
             expect(await userBalance()).toBe(before);
         });
 
-        it("applies the meter's own limits", async () => {
-            validateCustomer.mockResolvedValue({ customerName: "ADA OKAFOR", address: null, minAmount: "1500.00", maxAmount: null });
+        it("applies the meter's own limits, with the provider's fee on top of its minimum", async () => {
+            validateCustomer.mockResolvedValue({ customerName: "ADA OKAFOR", address: null, minAmount: "1000.00", maxAmount: null });
             const before = await userBalance();
 
             const result = await pay(meter);
-            expect(result).toMatchObject({ data: null, failure: "amount_out_of_range", limits: { minAmount: "1500.00", maxAmount: null } });
+            expect(result).toMatchObject({ data: null, failure: "amount_out_of_range", limits: { minAmount: "1100.00", maxAmount: null } });
             expect(await userBalance()).toBe(before);
         });
 

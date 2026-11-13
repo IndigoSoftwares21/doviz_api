@@ -1,7 +1,8 @@
 import Decimal from "decimal.js";
-import billProviderRegistry from "@/services/bills/billProviderRegistry";
+import fetchBillCustomer from "@/actions/billCustomerCheck/fetchBillCustomer";
 import BillProviderError from "@/services/bills/billProviderError";
 import monitoring from "@/utils/monitoring";
+import billCustomerMinimum from "@/utils/bills/billCustomerMinimum";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import { BILL_PROVIDER_ERROR_CODE } from "@/constants/bills";
 
@@ -13,13 +14,17 @@ import { BILL_PROVIDER_ERROR_CODE } from "@/constants/bills";
  */
 const checkPaymentCustomer = async ({
     provider,
+    productId,
     providerProductRef,
+    providerFee,
     requiresValidation,
     customerId,
     amount,
 }: {
     provider: string;
+    productId: string;
     providerProductRef: string;
+    providerFee: string;
     requiresValidation: boolean;
     customerId: string;
     amount: string;
@@ -27,9 +32,10 @@ const checkPaymentCustomer = async ({
     if (!requiresValidation) return { customerName: null, failure: null, limits: null };
 
     try {
-        const customer = await billProviderRegistry.get({ name: provider }).validateCustomer({ providerProductRef, customerId });
-        const limits = { minAmount: customer.minAmount, maxAmount: customer.maxAmount };
-        const tooLow = customer.minAmount !== null && new Decimal(amount).lessThan(customer.minAmount);
+        const customer = await fetchBillCustomer({ provider, productId, providerProductRef, customerId });
+        const minAmount = billCustomerMinimum({ minAmount: customer.minAmount, providerFee });
+        const limits = { minAmount, maxAmount: customer.maxAmount };
+        const tooLow = minAmount !== null && new Decimal(amount).lessThan(minAmount);
         const tooHigh = customer.maxAmount !== null && new Decimal(amount).greaterThan(customer.maxAmount);
         if (tooLow || tooHigh) return { customerName: customer.customerName, failure: ACTION_FAILURE.AMOUNT_OUT_OF_RANGE, limits };
         return { customerName: customer.customerName, failure: null, limits };

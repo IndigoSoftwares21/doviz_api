@@ -48,6 +48,8 @@ export interface ProviderBillProduct {
     /** For `range` products, when the provider gives limits (category defaults otherwise). */
     minAmount: string | null;
     maxAmount: string | null;
+    /** What the provider charges us per payment on top of the amount, when it states one (decimal string). */
+    providerFee: string | null;
     /** When the provider states it; otherwise parsed from the name. */
     validityDays: number | null;
 }

@@ -1,3 +1,4 @@
+import FLUTTERWAVE from "@/services/bills/providers/flutterwave/constants";
 import BillProviderError from "@/services/bills/billProviderError";
 import FlutterwaveClient from "@/services/bills/providers/flutterwave/flutterwaveClient";
 import getFlutterwaveConfig from "@/services/bills/providers/flutterwave/getFlutterwaveConfig";
@@ -248,6 +249,20 @@ describe("FlutterwaveBillProvider payments", () => {
         expect(http.requests.map((request) => request.url)).toEqual(["/bills/CF-unknown", `/bills/${externalId}`]);
     });
 
+    it("reads Flutterwave's bare FAILED answer as a failed payment (so it gets refunded)", async () => {
+        const http = new FakeFlutterwaveHttp().reply(`GET /bills/${externalId}`, fail(400, "FAILED"));
+        await expect(fakeProvider(http).getBillPayment({ externalId, providerReference: null })).resolves.toMatchObject({
+            externalId,
+            status: "failed",
+            token: null,
+        });
+    });
+
+    it("still treats any other error as unknown, never as failed", async () => {
+        const http = new FakeFlutterwaveHttp().reply(`GET /bills/${externalId}`, fail(400, "Payment FAILED to load"));
+        await expect(fakeProvider(http).getBillPayment({ externalId, providerReference: null })).rejects.toThrow();
+    });
+
     it("validates a customer by item and biller code", async () => {
         const http = new FakeFlutterwaveHttp().reply(
             "GET /bill-items/UB159/validate",
@@ -263,6 +278,22 @@ describe("FlutterwaveBillProvider payments", () => {
         const http = new FakeFlutterwaveHttp().reply("GET /bill-items/UB159/validate", ok({ response_code: "56", response_message: "Invalid meter" }));
         await expect(fakeProvider(http).validateCustomer({ providerProductRef: "BIL113:UB159", customerId: "1" }))
             .rejects.toMatchObject({ code: "rejected", providerMessage: "Invalid meter" });
+        expect(http.requests).toHaveLength(1); // a clear refusal is not retried
+    });
+
+    it("retries a one-off \"Item validation failed\" before trusting it", async () => {
+        const flaky = fail(400, "Item validation failed");
+        const http = new FakeFlutterwaveHttp().reply("GET /bill-items/UB584/validate", flaky, ok({ response_code: "00", name: "ADA", minimum: 900, maximum: 1000000 }));
+        await expect(fakeProvider(http).validateCustomer({ providerProductRef: "BIL204:UB584", customerId: "45067198783" }))
+            .resolves.toMatchObject({ customerName: "ADA", minAmount: "900.00" });
+        expect(http.requests).toHaveLength(2);
+    });
+
+    it("refuses a number that keeps failing the check, after a few tries", async () => {
+        const http = new FakeFlutterwaveHttp().reply("GET /bill-items/UB584/validate", fail(400, "Item validation failed"));
+        await expect(fakeProvider(http).validateCustomer({ providerProductRef: "BIL204:UB584", customerId: "11111111111" }))
+            .rejects.toMatchObject({ code: "rejected" });
+        expect(http.requests).toHaveLength(FLUTTERWAVE.VALIDATE_ATTEMPTS);
     });
 });
 

@@ -7,6 +7,8 @@ const FLUTTERWAVE = {
     DEFAULT_BASE_URL: "https://api.flutterwave.com/v3",
     /** Bill payments can be slow to answer; a timeout is treated as "outcome unknown". */
     TIMEOUT_MS: 30_000,
+    /** Tries of a customer check before an "Item validation failed" counts (one retry for a blip; see validateCustomer). */
+    VALIDATE_ATTEMPTS: 2,
     /** Bills are Nigeria-only on Flutterwave. */
     COUNTRY: "NG",
     TEST_KEY_PREFIX: "FLWSECK_TEST",

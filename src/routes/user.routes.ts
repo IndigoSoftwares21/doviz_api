@@ -6,6 +6,9 @@ import getTagSuggestions from "@/controllers/userTagSuggestions/get";
 import putUserTag from "@/controllers/userTag/put";
 import tagCheckLimiter from "@/middlewares/rateLimit/tagCheckLimiter";
 import tagUpdateLimiter from "@/middlewares/rateLimit/tagUpdateLimiter";
+import getUserKyc from "@/controllers/userKyc/get";
+import postUserKyc from "@/controllers/userKyc/post";
+import kycSubmitLimiter from "@/middlewares/rateLimit/kycSubmitLimiter";
 import requireAuth from "@/middlewares/requireAuth";
 
 const router = Router();
@@ -16,5 +19,8 @@ router.put("/name", requireAuth, putUserName);
 router.get("/tag/check", requireAuth, tagCheckLimiter, getTagCheck);
 router.get("/tag/suggestions", requireAuth, getTagSuggestions);
 router.put("/tag", requireAuth, tagUpdateLimiter, putUserTag);
+// Identity verification (BVN). Submitting is limited per user and needs the PIN.
+router.get("/kyc", requireAuth, getUserKyc);
+router.post("/kyc", requireAuth, kycSubmitLimiter, postUserKyc);
 
 export default router;

@@ -19,6 +19,7 @@ const selectBillProducts = async ({ billerId, provider, environment }: { billerI
             "bill_products.minAmount",
             "bill_products.maxAmount",
             "bill_products.serviceFee",
+            "bill_products.providerFee",
             "bill_products.validityDays",
         ])
         .where("biller_provider_refs.billerId", "=", billerId)

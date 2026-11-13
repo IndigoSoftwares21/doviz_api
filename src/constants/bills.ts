@@ -16,6 +16,12 @@ const BILLS = {
      */
     SUBMIT_WAIT_MS: 8 * 1000,
     /**
+     * A successful customer check (meter, smartcard) is reused this long, so a
+     * payment made just after the app's check doesn't ask the provider again —
+     * Flutterwave refuses a re-check of the same meter for ~5–15s after a success.
+     */
+    CUSTOMER_CHECK_REUSE_MS: 15 * 60 * 1000,
+    /**
      * When a new payment is re-checked with its provider (ms after it's made),
      * so the app hears the result over the socket within seconds even without
      * a provider webhook. After the last, the reconciler takes over.

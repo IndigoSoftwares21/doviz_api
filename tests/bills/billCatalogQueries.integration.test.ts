@@ -58,6 +58,7 @@ run("bill catalog listing against Postgres", () => {
                 minAmount: values.price ? null : "50.00",
                 maxAmount: values.price ? null : "50000.00",
                 serviceFee: "0.00",
+                providerFee: "0.00",
                 isEnabled: values.isEnabled ?? true,
                 isAvailable: values.isAvailable ?? true,
             })

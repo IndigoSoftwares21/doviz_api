@@ -51,6 +51,7 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "billers.name as billerName",
             "bill_products.name as billProductName",
             "bill_payments.customerId as billCustomerId",
+            "bill_payments.token as billToken",
             "crypto_deposits.rateNgnPerUsd",
             "crypto_deposits.txHash",
             "crypto_deposits.confirmations",

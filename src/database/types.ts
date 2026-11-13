@@ -77,6 +77,17 @@ export interface Database {
     updatedAt: Generated<Date>;
   };
 
+  bill_customer_checks: {
+    id: Generated<string>;
+    productId: ColumnType<string>;
+    customerId: ColumnType<string>;
+    customerName: ColumnType<string | null>;
+    address: ColumnType<string | null>;
+    minAmount: ColumnType<string | null>;
+    maxAmount: ColumnType<string | null>;
+    checkedAt: Generated<Date>;
+  };
+
   bill_payments: {
     id: Generated<string>;
     userId: ColumnType<string>;
@@ -124,6 +135,7 @@ export interface Database {
     syncedAt: ColumnType<Date | null>;
     createdAt: Generated<Date>;
     updatedAt: Generated<Date>;
+    providerFee: ColumnType<string>;
   };
 
   biller_provider_refs: {
@@ -389,6 +401,37 @@ export interface Database {
     isLocked: ColumnType<number | null>;
   };
 
+  kyc_bvn_claims: {
+    bvnIndex: ColumnType<unknown>;
+    userId: ColumnType<string>;
+    createdAt: Generated<Date>;
+  };
+
+  kyc_records: {
+    id: Generated<string>;
+    userId: ColumnType<string>;
+    status: ColumnType<string>;
+    level: ColumnType<string>;
+    bvnIndex: ColumnType<unknown>;
+    bvnLast4: ColumnType<unknown>;
+    keyVersion: ColumnType<number>;
+    wrappedKey: ColumnType<string>;
+    bvnEnc: ColumnType<string>;
+    firstNameEnc: ColumnType<string>;
+    middleNameEnc: ColumnType<string | null>;
+    lastNameEnc: ColumnType<string>;
+    dateOfBirthEnc: ColumnType<string>;
+    genderEnc: ColumnType<string>;
+    addressEnc: ColumnType<string>;
+    rejectionReason: ColumnType<string | null>;
+    decidedBy: ColumnType<string | null>;
+    submittedAt: Generated<Date>;
+    decidedAt: ColumnType<Date | null>;
+    supersededAt: ColumnType<Date | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+  };
+
   ledger_accounts: {
     id: Generated<string>;
     kind: ColumnType<string>;
@@ -587,6 +630,7 @@ export interface Database {
     status: ColumnType<string>;
     tag: ColumnType<string | null>;
     tagChangedAt: ColumnType<Date | null>;
+    activeKycRecordId: ColumnType<string | null>;
   };
 
 }
