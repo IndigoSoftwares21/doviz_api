@@ -25,6 +25,8 @@
     "crypto:sync": "ts-node -r tsconfig-paths/register scripts/sync-crypto-catalog.ts",
     "crypto:set-markup": "ts-node -r tsconfig-paths/register scripts/set-conversion-markup.ts",
     "crypto:mock-deposit": "ts-node -r tsconfig-paths/register scripts/mock-crypto-deposit.ts",
+    "funding:use": "ts-node -r tsconfig-paths/register scripts/use-funding-flow.ts",
+    "funding:use:prod": "DOTENV_CONFIG_PATH=.env.production ts-node -r tsconfig-paths/register scripts/use-funding-flow.ts",
     "storage:setup": "ts-node -r tsconfig-paths/register scripts/setup-storage.ts",
     "bills:sync": "ts-node -r tsconfig-paths/register scripts/sync-bill-catalog.ts",
     "bills:review": "ts-node -r tsconfig-paths/register scripts/review-bill-billers.ts",

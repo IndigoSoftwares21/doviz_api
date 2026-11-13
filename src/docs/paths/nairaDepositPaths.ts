@@ -71,10 +71,23 @@ const nairaDeposit = {
 };
 
 const nairaDepositPaths = {
+    "/naira-deposits/options": {
+        get: {
+            tags: ["Naira deposits"], summary: "Which Add money flow to show", operationId: "getNairaFundingOptions", security: auth,
+            description: "Switched on the server (`npm run funding:use -- <squad|korapay>`) without an app release. `account_number`: verify identity (GET/POST /user/kyc), then the user's personal account number. `bank_transfer`: the amount-first one-time account (POST /naira-deposits). Treat an unknown mode as `account_number`.",
+            responses: {
+                "200": { description: "Add money options", content: jsonContent({ schema: { type: "object", properties: {
+                    message: { type: "string", example: "Add money options" }, code: { type: "integer", example: 200 },
+                    data: { type: "object", properties: { mode: { type: "string", enum: ["account_number", "bank_transfer"] } } },
+                } } }) },
+                "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "500": { $ref: "#/components/responses/ServerError" },
+            },
+        },
+    },
     "/naira-deposits": {
         post: {
             tags: ["Naira deposits"], summary: "Start a bank transfer deposit", operationId: "postNairaDeposit", security: auth,
-            description: `Issues a one-time account for this amount (₦${NAIRA_DEPOSITS.MIN_AMOUNT}–₦${NAIRA_DEPOSITS.MAX_AMOUNT}). No PIN — no money leaves the user. Returns \`201\` for a new deposit, or \`200\` with the original when the \`idempotencyKey\` was already used.`,
+            description: `**Only while the Add money mode is \`bank_transfer\`** (see GET /naira-deposits/options) — otherwise \`409\`. Issues a one-time account for this amount (₦${NAIRA_DEPOSITS.MIN_AMOUNT}–₦${NAIRA_DEPOSITS.MAX_AMOUNT}). No PIN — no money leaves the user. Returns \`201\` for a new deposit, or \`200\` with the original when the \`idempotencyKey\` was already used.`,
             requestBody: { required: true, content: jsonContent({
                 schema: { type: "object", required: ["amount", "idempotencyKey"], properties: {
                     amount: { type: "string", example: "50000.00", description: "What the user wants to receive." },
@@ -86,6 +99,7 @@ const nairaDepositPaths = {
                 "201": { description: "Account issued.", content: jsonContent({ schema: dataEnvelope({ message: "Transfer details ready", code: 201, data: nairaDeposit }) }) },
                 "200": { description: "This idempotencyKey was already used — the original deposit.", content: jsonContent({ schema: dataEnvelope({ message: "Deposit already started", code: 200, data: nairaDeposit }) }) },
                 "400": validation, "401": ref("Unauthorized"), "403": ref("Forbidden"), "500": ref("ServerError"),
+                "409": error("The account-number flow is on: one-time accounts aren't offered.", "Add money with your personal account number instead. Update the app if you don't see it.", 409),
                 "503": error("No provider could issue an account right now.", "Bank transfer deposits are temporarily unavailable. Please try again shortly.", 503),
             },
         },

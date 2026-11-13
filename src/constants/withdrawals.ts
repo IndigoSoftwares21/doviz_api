@@ -22,6 +22,8 @@ const WITHDRAWALS = {
 export const PROVIDER_SERVICE = {
     PAYOUTS: "payouts",
     CRYPTO_SENDS: "crypto_sends",
+    /** Which flow Add money uses — see constants/nairaFunding. */
+    NAIRA_FUNDING: "naira_funding",
 } as const;
 
 /**

@@ -3,7 +3,9 @@ import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import createNairaDeposit from "@/actions/nairaDeposit/createNairaDeposit";
 import postNairaDepositSchema from "./schema/postNairaDepositSchema";
+import fetchNairaFundingOptions from "@/actions/nairaFunding/fetchNairaFundingOptions";
 import ACTION_FAILURE from "@/constants/actionFailure";
+import { NAIRA_FUNDING_MESSAGES, NAIRA_FUNDING_MODE } from "@/constants/nairaFunding";
 
 export const DEPOSITS_UNAVAILABLE = "Bank transfer deposits are temporarily unavailable. Please try again shortly.";
 
@@ -11,6 +13,10 @@ const postNairaDeposit = async (req: Request, res: Response) => {
     try {
         const { amount, idempotencyKey } = req.body;
         const { id: userId } = req.user!;
+
+        // One-time accounts only while that flow is switched on — also refuses older app versions.
+        const { data: options } = await fetchNairaFundingOptions();
+        if (options.mode !== NAIRA_FUNDING_MODE.BANK_TRANSFER) return handleError({ res, req, message: NAIRA_FUNDING_MESSAGES.USE_ACCOUNT_NUMBER, code: 409 });
 
         const validated = await postNairaDepositSchema.parseAsync({ amount, idempotencyKey });
 

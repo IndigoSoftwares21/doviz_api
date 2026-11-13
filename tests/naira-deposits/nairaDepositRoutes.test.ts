@@ -8,6 +8,7 @@ import fetchNairaDeposit from "@/actions/nairaDeposit/fetchNairaDeposit";
 import fetchNairaDeposits from "@/actions/nairaDeposits/fetchNairaDeposits";
 import fetchActiveNairaDeposit from "@/actions/nairaDeposit/fetchActiveNairaDeposit";
 import createNairaDepositCancellation from "@/actions/nairaDepositCancellation/createNairaDepositCancellation";
+import fetchNairaFundingOptions from "@/actions/nairaFunding/fetchNairaFundingOptions";
 import ACTION_FAILURE from "@/constants/actionFailure";
 
 jest.mock("@/database", () => ({ db: {}, withTransaction: jest.fn() }));
@@ -17,6 +18,7 @@ jest.mock("@/actions/nairaDeposit/fetchNairaDeposit");
 jest.mock("@/actions/nairaDeposits/fetchNairaDeposits");
 jest.mock("@/actions/nairaDeposit/fetchActiveNairaDeposit");
 jest.mock("@/actions/nairaDepositCancellation/createNairaDepositCancellation");
+jest.mock("@/actions/nairaFunding/fetchNairaFundingOptions");
 
 process.env.JWT_ACCESS_SECRET = "test-jwt-secret-test-jwt-secret-test-0001";
 
@@ -40,6 +42,24 @@ describe("naira deposit routes", () => {
     beforeEach(() => {
         jest.resetAllMocks();
         jest.mocked(selectActiveSession).mockResolvedValue({ id: "session-1", deviceId: "d-1", accountStatus: "active" });
+        // These tests cover the one-time account flow, so it's switched on.
+        jest.mocked(fetchNairaFundingOptions).mockResolvedValue({ data: { mode: "bank_transfer" } });
+    });
+
+    it("tells the app which Add money flow is on", async () => {
+        jest.mocked(fetchNairaFundingOptions).mockResolvedValue({ data: { mode: "account_number" } });
+        const response = await request(app).get("/api/v1/app/naira-deposits/options").set("Authorization", auth());
+        expect(response.status).toBe(200);
+        expect(response.body.data).toEqual({ mode: "account_number" });
+        expect(response.headers["cache-control"]).toBe("no-store");
+    });
+
+    it("refuses one-time accounts while the account-number flow is on (older apps too)", async () => {
+        jest.mocked(fetchNairaFundingOptions).mockResolvedValue({ data: { mode: "account_number" } });
+        const response = await post({ amount: "50000", idempotencyKey: KEY });
+        expect(response.status).toBe(409);
+        expect(response.body.message).toMatch(/personal account number/);
+        expect(createNairaDeposit).not.toHaveBeenCalled();
     });
 
     it("requires auth", async () => {
