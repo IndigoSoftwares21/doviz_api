@@ -1,5 +1,5 @@
 import FossapayVirtualAccountProvider from "@/services/virtualAccounts/providers/fossapay/fossapayVirtualAccountProvider";
-import FossapayClient from "@/services/virtualAccounts/providers/fossapay/fossapayClient";
+import FossapayClient from "@/services/fossapay/fossapayClient";
 
 const customer = {
     customerRef: "zkabc123",
@@ -58,6 +58,14 @@ describe("Fossapay account numbers", () => {
     ])("maps %s to %s", async (_why, reply, code) => {
         post.mockResolvedValueOnce(reply);
         await expect(fossapay.createAccount(customer)).rejects.toMatchObject({ code });
+    });
+
+    it("sweeps into the master wallet, whose account number sits under virtualAccount (seen live)", async () => {
+        const get = jest.fn().mockResolvedValue({ status: 200, data: { data: { id: "m-1", availableBalance: 0, virtualAccount: { accountNumber: "8800112233", bankCode: "232", bankName: "Sterling Bank" } } } });
+        const withGet = new FossapayVirtualAccountProvider({ post, get } as unknown as FossapayClient, "ops@ziks.app", "Nigeria");
+        post.mockResolvedValueOnce({ status: 200, data: { status: "success" } });
+        await withGet.sweepToPool({ fromAccount: "9712345741", amount: "495.00", reference: "sw123" });
+        expect(post).toHaveBeenCalledWith("/wallets/fiat/transfers/wallet-to-wallet", { fromAccount: "9712345741", toAccount: "8800112233", amount: 495, reference: "sw123", narration: "Ziks pool" });
     });
 
     it("refuses a wallet reply without a real account number", async () => {

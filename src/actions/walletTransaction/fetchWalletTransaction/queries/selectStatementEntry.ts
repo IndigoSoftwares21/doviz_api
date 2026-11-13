@@ -23,6 +23,18 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
                 ]),
             ),
         )
+        // The withdrawal this line belongs to (its hold, or its final settle/refund).
+        .leftJoin("bank_withdrawals", (join) =>
+            join.on((eb) =>
+                eb.or([
+                    eb("bank_withdrawals.holdLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                    eb("bank_withdrawals.finalLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                ]),
+            ),
+        )
+        .leftJoin("user_bank_accounts as withdrawal_account", "withdrawal_account.id", "bank_withdrawals.bankAccountId")
+        .leftJoin("payout_banks as withdrawal_bank", "withdrawal_bank.id", "withdrawal_account.payoutBankId")
+        .leftJoin("payout_banks as recipient_bank", "recipient_bank.id", "bank_withdrawals.recipientPayoutBankId")
         .leftJoin("billers", "billers.id", "bill_payments.billerId")
         .leftJoin("bill_products", "bill_products.id", "bill_payments.productId")
         .select([
@@ -61,6 +73,24 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "naira_deposits.senderName",
             "naira_deposits.senderBankName",
             "naira_deposits.senderAccountNumber",
+            "bank_withdrawals.id as withdrawalId",
+            "bank_withdrawals.status as withdrawalStatus",
+            "bank_withdrawals.amount as withdrawalAmount",
+            "bank_withdrawals.fee as withdrawalFee",
+            "bank_withdrawals.feeReserve as withdrawalFeeReserve",
+            "bank_withdrawals.failureReason as withdrawalFailureReason",
+            "bank_withdrawals.requestedAt as withdrawalRequestedAt",
+            "bank_withdrawals.finalizedAt as withdrawalFinalizedAt",
+            "withdrawal_account.accountName as withdrawalAccountName",
+            "withdrawal_account.accountNumber as withdrawalAccountNumber",
+            "withdrawal_bank.name as withdrawalBankName",
+            "bank_withdrawals.recipientAccountName as withdrawalRecipientName",
+            "bank_withdrawals.recipientAccountNumber as withdrawalRecipientNumber",
+            "recipient_bank.name as withdrawalRecipientBankName",
+            "bank_withdrawals.narration as withdrawalNarration",
+            "naira_deposits.amountReceived as depositAmountReceived",
+            "naira_deposits.providerFee as depositFee",
+            "naira_deposits.amountCredited as depositAmountCredited",
         ])
         .where("ledger_entries.id", "=", entryId)
         .where("ledger_accounts.kind", "=", LEDGER_ACCOUNT_KIND.USER_AVAILABLE)

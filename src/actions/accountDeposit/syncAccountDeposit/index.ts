@@ -5,6 +5,9 @@ import createNairaDepositCredit from "@/actions/nairaDepositCredit/createNairaDe
 import monitoring from "@/utils/monitoring";
 import selectAccountByNumber from "./queries/selectAccountByNumber";
 import insertAccountDeposit from "./queries/insertAccountDeposit";
+import insertAccountSweep from "./queries/insertAccountSweep";
+import runAccountSweep from "@/actions/accountSweep/runAccountSweep";
+import Decimal from "decimal.js";
 import { SYNC_OUTCOME } from "@/constants/cryptoStatus";
 
 /**
@@ -56,10 +59,19 @@ const syncAccountDeposit = async ({ provider: providerName, reference }: { provi
                 sender: deposit.sender,
             },
         });
-        return data.credited;
+        // Providers that leave the money in the user's own wallet: queue moving it into the pool.
+        const sweepId = provider.sweepToPool
+            ? await insertAccountSweep({
+                  trx,
+                  values: { provider: provider.name, depositReference: deposit.reference, fromAccount: account.accountNumber, amount: new Decimal(deposit.amount.amount).minus(deposit.fee?.amount ?? 0).toFixed(2) },
+              })
+            : null;
+        return { credited: data.credited, sweepId };
     });
 
-    return { data: { outcome: credited ? SYNC_OUTCOME.CREDITED : SYNC_OUTCOME.UNCHANGED } };
+    // Try the sweep now; the sweep-account-deposits job retries anything left.
+    if (credited.sweepId) await runAccountSweep({ id: credited.sweepId }).catch((error) => monitoring.error(`Sweep ${credited.sweepId} errored — the job will retry`, error as Error));
+    return { data: { outcome: credited.credited ? SYNC_OUTCOME.CREDITED : SYNC_OUTCOME.UNCHANGED } };
 };
 
 export default syncAccountDeposit;

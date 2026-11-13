@@ -35,7 +35,12 @@ const billEntry = (id: string) => ({
     billPaymentId: "bill-1", billCategory: BILL_CATEGORY.DATA, billerName: "MTN", billProductName: "1.5GB - 30 days", billCustomerId: "08031234567", billToken: null,
 });
 
-const noBankTransfer = { nairaDepositId: null, senderName: null, senderBankName: null, senderAccountNumber: null };
+const noWithdrawal = {
+    withdrawalId: null, withdrawalStatus: null, withdrawalAmount: null, withdrawalFee: null, withdrawalFeeReserve: null, withdrawalFailureReason: null,
+    withdrawalRequestedAt: null, withdrawalFinalizedAt: null, withdrawalAccountName: null, withdrawalAccountNumber: null, withdrawalBankName: null,
+    withdrawalRecipientName: null, withdrawalRecipientNumber: null, withdrawalRecipientBankName: null, withdrawalNarration: null,
+};
+const noBankTransfer = { nairaDepositId: null, senderName: null, senderBankName: null, senderAccountNumber: null, depositAmountReceived: null, depositFee: null, depositAmountCredited: null, ...noWithdrawal };
 
 describe("wallet statement routes", () => {
     beforeEach(() => {
@@ -134,17 +139,41 @@ describe("wallet statement routes", () => {
         expect(response.body.data.bankTransfer).toBeNull();
     });
 
-    it("shows who sent a bank-transfer top-up (masked), and null when the provider didn't say", async () => {
+    it("shows a bank-transfer top-up: who sent it (masked), what they sent, the fee, and what was credited", async () => {
         jest.mocked(selectUserStatementEntry).mockResolvedValue({ id: ENTRY });
         const line = { ...entry(ENTRY), rateNgnPerUsd: null, txHash: null, confirmations: null, detectedAt: null, completedAt: null };
         jest.mocked(selectStatementEntry).mockResolvedValue({
             ...line, nairaDepositId: "dep-1", senderName: "ADA OKAFOR", senderBankName: "First Bank", senderAccountNumber: "******1001",
+            depositAmountReceived: "500.00", depositFee: "10.00", depositAmountCredited: "490.00",
         } as never);
         const response = await get(`/transactions/${ENTRY}`);
-        expect(response.body.data.bankTransfer).toEqual({ id: "dep-1", sender: { name: "ADA OKAFOR", bankName: "First Bank", accountNumber: "******1001" } });
+        expect(response.body.data.bankTransfer).toEqual({
+            id: "dep-1",
+            amountSent: "500.00",
+            fee: "10.00",
+            amountCredited: "490.00",
+            sender: { name: "ADA OKAFOR", bankName: "First Bank", accountNumber: "******1001" },
+        });
 
         jest.mocked(selectStatementEntry).mockResolvedValue({ ...line, ...noBankTransfer, nairaDepositId: "dep-2" } as never);
-        expect((await get(`/transactions/${ENTRY}`)).body.data.bankTransfer).toEqual({ id: "dep-2", sender: null });
+        expect((await get(`/transactions/${ENTRY}`)).body.data.bankTransfer).toEqual({ id: "dep-2", amountSent: null, fee: null, amountCredited: null, sender: null });
+    });
+
+    it("shows a withdrawal's receipt: recipient, bank, narration, amount, fee and total", async () => {
+        jest.mocked(selectUserStatementEntry).mockResolvedValue({ id: ENTRY });
+        const line = { ...entry(ENTRY), rateNgnPerUsd: null, txHash: null, confirmations: null, detectedAt: null, completedAt: null, ...noBankTransfer };
+        const at = new Date("2026-11-13T15:30:00.000Z");
+        jest.mocked(selectStatementEntry).mockResolvedValue({
+            ...line, withdrawalId: "w-1", withdrawalStatus: "completed", withdrawalAmount: "100.00", withdrawalFee: "20.00", withdrawalFeeReserve: "20.00",
+            withdrawalRequestedAt: at, withdrawalFinalizedAt: at, withdrawalAccountName: "ADA OKAFOR", withdrawalAccountNumber: "8031234567", withdrawalBankName: "OPay - Paycom",
+        } as never);
+        const response = await get(`/transactions/${ENTRY}`);
+        expect(response.body.data.withdrawal).toEqual({
+            id: "w-1", reference: "w-1", status: "completed",
+            recipient: { name: "ADA OKAFOR", bankName: "OPay - Paycom", accountNumber: "8031234567" },
+            narration: "Ziks withdrawal", amount: "100.00", fee: "20.00", total: "120.00", failureReason: null,
+            requestedAt: at.toISOString(), completedAt: at.toISOString(),
+        });
     });
 
     it("answers 400 for someone else's (or a missing) line and never loads it", async () => {

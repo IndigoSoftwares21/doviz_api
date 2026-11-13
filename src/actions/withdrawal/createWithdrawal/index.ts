@@ -6,6 +6,7 @@ import createLedgerPosting from "@/actions/ledger/createLedgerPosting";
 import createAuditLog from "@/actions/auditLog/createAuditLog";
 import fetchWithdrawal from "@/actions/withdrawal/fetchWithdrawal";
 import fetchWithdrawalQuote from "@/actions/withdrawalQuote/fetchWithdrawalQuote";
+import { WithdrawalDestination } from "@/actions/withdrawalQuote/fetchWithdrawalQuote/utils/resolveDestination";
 import publishUserEvent from "@/services/realtime/publishUserEvent";
 import isInsufficientBalanceError from "@/utils/ledger/isInsufficientBalanceError";
 import monitoring from "@/utils/monitoring";
@@ -26,7 +27,9 @@ import { AUDIT_ACTOR_TYPE, AUDIT_ENTITY_TYPE } from "@/constants/auditTargets";
 
 interface ICreateWithdrawal {
     userId: string;
-    bankAccountId: string;
+    destination: WithdrawalDestination;
+    /** The user's own words for the recipient's statement (transfers to others); the default otherwise. */
+    narration: string | null;
     amount: string;
     /** The total the user confirmed (amount + fee shown). A different one now → they re-confirm. */
     expectedTotal: string;
@@ -37,14 +40,15 @@ interface ICreateWithdrawal {
 }
 
 /**
- * Sends naira to one of the user's own bank accounts: PIN → re-quote with the
+ * Sends naira to one of the user's own bank accounts, or (when switched on) to
+ * anyone's — whose name the provider confirms in the quote: PIN → re-quote with the
  * ACTIVE provider (fee/provider changed since they confirmed → quote_changed,
  * nothing held) → float check (skipped if the provider can't report one) →
  * hold amount + fee reserve and record the withdrawal, with its provider, in
  * one transaction (the ledger refuses an overdraft) → send (≤ SUBMIT_WAIT_MS,
  * then background) → return it. The same idempotency key returns the original.
  */
-const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, idempotencyKey, pin, ipAddress, userAgent }: ICreateWithdrawal) => {
+const createWithdrawal = async ({ userId, destination, narration, amount, expectedTotal, idempotencyKey, pin, ipAddress, userAgent }: ICreateWithdrawal) => {
     const { data: verification } = await createPinVerification({ userId, pin, ipAddress, userAgent });
     if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return { data: null, failure: ACTION_FAILURE.PIN, verification, isNew: false, quote: null, limits: null };
 
@@ -57,7 +61,7 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
     const previous = await replay();
     if (previous) return previous;
 
-    const { data: quote, failure, limits } = await fetchWithdrawalQuote({ userId, bankAccountId, amount });
+    const { data: quote, failure, limits } = await fetchWithdrawalQuote({ userId, destination, amount });
     if (!quote) return { data: null, failure, verification, isNew: false, quote: null, limits };
     const summary = { amount: quote.amount, fee: quote.fee, feeIsExact: quote.feeIsExact, totalHeld: quote.totalHeld, currency: quote.currency };
     if (!new Decimal(expectedTotal).equals(quote.totalHeld)) {
@@ -71,6 +75,9 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
 
     const customer = await selectWithdrawalCustomer({ userId });
     const id = randomUUID();
+    const { account } = quote;
+    const toSomeoneElse = account.bankAccountId === null;
+    const statementNarration = (toSomeoneElse && narration) || WITHDRAWALS.NARRATION;
 
     try {
         await withTransaction(async (trx) => {
@@ -78,9 +85,9 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
                 trx,
                 idempotencyKey: `withdrawal-hold:${id}`,
                 type: LEDGER_TRANSACTION_TYPE.WITHDRAWAL_HOLD,
-                description: `Withdrawal to ${quote.account.bankName}`.slice(0, 255),
+                description: (toSomeoneElse ? `Transfer to ${account.accountName}` : `Withdrawal to ${account.bankName}`).slice(0, 255),
                 currency: quote.currency,
-                metadata: { withdrawalId: id, provider: provider.name, bankAccountId, fee: quote.fee, feeIsExact: quote.feeIsExact },
+                metadata: { withdrawalId: id, provider: provider.name, bankAccountId: account.bankAccountId, toSomeoneElse, fee: quote.fee, feeIsExact: quote.feeIsExact },
                 entries: [
                     { account: { kind: LEDGER_ACCOUNT_KIND.USER_AVAILABLE, userId }, amount: new Decimal(quote.totalHeld).negated().toFixed(2) },
                     { account: { kind: LEDGER_ACCOUNT_KIND.PAYOUTS_IN_TRANSIT, provider: provider.name }, amount: quote.totalHeld },
@@ -91,7 +98,10 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
                 trx,
                 id,
                 userId,
-                bankAccountId,
+                destination: toSomeoneElse
+                    ? { recipientPayoutBankId: account.payoutBankId, recipientAccountNumber: account.accountNumber, recipientAccountName: account.accountName }
+                    : { bankAccountId: account.bankAccountId! },
+                narration: statementNarration,
                 provider: provider.name,
                 environment: provider.environment,
                 providerBankCode: quote.providerBankId,
@@ -112,7 +122,7 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
                 entityId: id,
                 ipAddress,
                 userAgent,
-                metadata: { withdrawalId: id, bankAccountId, amount: quote.amount, feeReserve: quote.fee, provider: provider.name },
+                metadata: { withdrawalId: id, bankAccountId: account.bankAccountId, toSomeoneElse, amount: quote.amount, feeReserve: quote.fee, provider: provider.name },
             });
 
             await publishUserEvent({ trx, userId, event: REALTIME_EVENT.WALLET_BALANCE_CHANGED });
@@ -132,10 +142,11 @@ const createWithdrawal = async ({ userId, bankAccountId, amount, expectedTotal, 
         withdrawalId: id,
         provider: provider.name,
         providerBankId: quote.providerBankId,
-        accountNumber: quote.account.accountNumber,
-        accountName: quote.account.accountName,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
         amount: quote.amount,
-        customer: { name: [customer.firstName, customer.lastName].filter(Boolean).join(" ") || quote.account.accountName, email: customer.email },
+        narration: statementNarration,
+        customer: { name: [customer.firstName, customer.lastName].filter(Boolean).join(" ") || account.accountName, email: customer.email },
     }).catch((error) => monitoring.error(`Withdrawal ${id}: submission failed — will reconcile`, error as Error));
     let timer: NodeJS.Timeout | undefined;
     await Promise.race([submission, new Promise<void>((resolve) => (timer = setTimeout(resolve, WITHDRAWALS.SUBMIT_WAIT_MS)))]);

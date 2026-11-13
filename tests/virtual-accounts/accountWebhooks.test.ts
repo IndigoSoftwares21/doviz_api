@@ -34,17 +34,21 @@ describe("Fossapay webhooks", () => {
         expect(parseFossapayWebhook({ nonsense: true })).toBeNull();
     });
 
+    it("maps a transaction: Fossapay's amount is AFTER its fee, so sent = amount + fee (₦500 → {495, 5}, seen live)", () => {
+        expect(mapFossapayDeposit({ record: { ...fossapayDeposit, amount: 495, fee: 5 }, unit: "naira" })).toMatchObject({ amount: { amount: "500.00" }, fee: { amount: "5.00" } });
+    });
+
     it("maps a transaction in naira (default) or kobo, masking the sender's account number", () => {
         expect(mapFossapayDeposit({ record: fossapayDeposit, unit: "naira" })).toEqual({
             reference: "txn_1",
             accountNumber: "9912345678",
             status: "completed",
-            amount: { amount: "50000.00", currency: "NGN" },
+            amount: { amount: "50500.00", currency: "NGN" },
             fee: { amount: "500.00", currency: "NGN" },
             paidAt: new Date("2026-11-13T15:00:00.000Z"),
             sender: { name: "JOHN DOE", bankName: "GTBank", bankCode: null, accountNumber: "******6789" },
         });
-        expect(mapFossapayDeposit({ record: fossapayDeposit, unit: "kobo" })).toMatchObject({ amount: { amount: "500.00" }, fee: { amount: "5.00" } });
+        expect(mapFossapayDeposit({ record: fossapayDeposit, unit: "kobo" })).toMatchObject({ amount: { amount: "505.00" }, fee: { amount: "5.00" } });
         expect(mapFossapayDeposit({ record: { ...fossapayDeposit, status: "pending" }, unit: "naira" })).toMatchObject({ status: "pending" });
     });
 });

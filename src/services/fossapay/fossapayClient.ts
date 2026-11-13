@@ -5,7 +5,7 @@ const TIMEOUT_MS = 30_000;
 export type FossapayReply = { status: number; data: Record<string, unknown> } | { status: null; code: string };
 
 /**
- * Fossapay's HTTP API (x-api-key, no scheme). Production only — Fossapay has
+ * Fossapay's HTTP API (x-api-key, no scheme) — shared by account numbers and payouts. Production only — Fossapay has
  * no sandbox, so every call is live. Never throws for a status; never logs a body.
  */
 class FossapayClient {
@@ -18,17 +18,18 @@ class FossapayClient {
         return this.send("GET", path);
     }
 
-    post(path: string, body: Record<string, unknown>) {
-        return this.send("POST", path, body);
+    /** `headers` e.g. { "X-Idempotency-Key": … } for payouts. */
+    post(path: string, body: Record<string, unknown>, headers: Record<string, string> = {}) {
+        return this.send("POST", path, body, headers);
     }
 
-    private async send(method: "GET" | "POST", path: string, body?: Record<string, unknown>): Promise<FossapayReply> {
+    private async send(method: "GET" | "POST", path: string, body?: Record<string, unknown>, headers: Record<string, string> = {}): Promise<FossapayReply> {
         try {
             const response = await axios.request({
                 method,
                 url: `${this.baseUrl.replace(/\/+$/, "")}${path}`,
                 data: body,
-                headers: { "x-api-key": this.apiKey, "Content-Type": "application/json" },
+                headers: { "x-api-key": this.apiKey, "Content-Type": "application/json", ...headers },
                 timeout: TIMEOUT_MS,
                 validateStatus: () => true,
             });

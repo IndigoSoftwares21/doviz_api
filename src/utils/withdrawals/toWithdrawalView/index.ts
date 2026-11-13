@@ -11,10 +11,12 @@ export interface WithdrawalRow {
     failureReason: string | null;
     requestedAt: Date;
     finalizedAt: Date | null;
-    bankAccountId: string;
-    accountNumber: string;
-    accountName: string;
-    bankName: string;
+    narration: string | null;
+    /** null for a transfer to someone else's account. */
+    bankAccountId: string | null;
+    accountNumber: string | null;
+    accountName: string | null;
+    bankName: string | null;
 }
 
 /**
@@ -25,7 +27,15 @@ export interface WithdrawalRow {
 const toWithdrawalView = ({ row }: { row: WithdrawalRow }) => ({
     id: row.id,
     status: row.status,
-    bankAccount: { id: row.bankAccountId, bankName: row.bankName, accountNumber: maskAccountNumber({ accountNumber: row.accountNumber }), accountName: row.accountName },
+    // Own account: masked, as in the account list. Someone else's: in full (it's their receipt to share).
+    bankAccount: {
+        id: row.bankAccountId,
+        bankName: row.bankName,
+        accountNumber: row.bankAccountId && row.accountNumber ? maskAccountNumber({ accountNumber: row.accountNumber }) : row.accountNumber,
+        accountName: row.accountName,
+    },
+    toSomeoneElse: row.bankAccountId === null,
+    narration: row.narration,
     currency: row.currency,
     amount: row.amount,
     /** The real fee, once completed. */

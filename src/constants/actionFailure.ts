@@ -30,6 +30,8 @@ const ACTION_FAILURE = {
     KYC_REQUIRED: "kyc_required",
     VIRTUAL_ACCOUNT_REFUSED: "virtual_account_refused",
     ACCOUNT_NUMBERS_OFF: "account_numbers_off",
+    TRANSFERS_TO_OTHERS_OFF: "transfers_to_others_off",
+    RECIPIENT_ACCOUNT_NOT_FOUND: "recipient_account_not_found",
 } as const;
 
 export type ActionFailure = (typeof ACTION_FAILURE)[keyof typeof ACTION_FAILURE];

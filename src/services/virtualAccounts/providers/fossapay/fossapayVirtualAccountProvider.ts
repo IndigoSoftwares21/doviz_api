@@ -3,7 +3,7 @@ import { WebhookRequest } from "@/services/crypto/cryptoProvider";
 import { ProviderVirtualAccount, VIRTUAL_ACCOUNT_ERROR, VirtualAccountCustomer, VirtualAccountProvider, VirtualAccountProviderError } from "../../virtualAccountProvider";
 import { parseFossapayWebhook, verifyFossapayWebhook } from "./fossapayWebhooks";
 import mapFossapayDeposit from "./mapFossapayDeposit";
-import FossapayClient, { FossapayReply } from "./fossapayClient";
+import FossapayClient, { FossapayReply } from "@/services/fossapay/fossapayClient";
 import fossapayCustomerFields, { uniqueEmail } from "./fossapayCustomerFields";
 
 const message = (reply: FossapayReply) => (reply.status === null ? reply.code : String(reply.data.message ?? "no message"));
@@ -36,6 +36,22 @@ class FossapayVirtualAccountProvider implements VirtualAccountProvider {
 
     isWebhookPing() {
         return false;
+    }
+
+    private masterAccount: string | null = null;
+
+    /** Wallet-to-wallet (free) from the user's wallet into our master wallet; a repeated reference returns the earlier success. */
+    async sweepToPool({ fromAccount, amount, reference }: { fromAccount: string; amount: string; reference: string }) {
+        if (!this.masterAccount) {
+            const master = await this.client.get("/wallets/fiat/master");
+            // Seen live: { data: { id, availableBalance, virtualAccount: { accountNumber, bankCode, bankName } } }.
+            const wallet = ok(master) ? ((master.data.data ?? master.data) as Record<string, unknown>) : {};
+            const number = String(((wallet.virtualAccount ?? {}) as Record<string, unknown>).accountNumber ?? wallet.accountNumber ?? "");
+            if (!/^\d{10}$/.test(number)) throw new Error(`Fossapay master wallet lookup → ${master.status ?? "no reply"} (${message(master)})`);
+            this.masterAccount = number;
+        }
+        const reply = await this.client.post("/wallets/fiat/transfers/wallet-to-wallet", { fromAccount, toAccount: this.masterAccount, amount: Number(amount), reference, narration: "Ziks pool" });
+        if (!ok(reply)) throw new Error(`Fossapay sweep → ${reply.status ?? "no reply"} (${message(reply)})`);
     }
 
     async getDeposit({ reference }: { reference: string }) {

@@ -21,12 +21,21 @@ export const verifyFossapayWebhook = ({ request, secret }: { request: WebhookReq
     return expected.length === given.length && timingSafeEqual(expected, given);
 };
 
-/** An NGN `deposit.completed` → an account deposit (by transaction id); any other event → acknowledged and ignored. */
+const PAYOUT_EVENTS = ["payout.completed", "payout.failed", "payout.reversed"];
+
+/**
+ * An NGN `deposit.completed` → an account deposit (by transaction id); a
+ * `payout.*` → our withdrawal (by its reference = our withdrawal id); anything
+ * else → acknowledged and ignored. Either way the record is re-fetched before money moves.
+ */
 export const parseFossapayWebhook = (body: unknown): ProviderWebhookEvent | null => {
     const envelope = (body ?? {}) as { eventId?: unknown; eventType?: unknown; timestamp?: unknown; data?: Record<string, unknown> };
     if (typeof envelope.eventId !== "string" || typeof envelope.eventType !== "string") return null;
     const data = envelope.data ?? {};
     const isNairaDeposit = envelope.eventType === "deposit.completed" && data.currency === "NGN" && typeof data.transactionId === "string";
+    if (PAYOUT_EVENTS.includes(envelope.eventType) && typeof data.reference === "string") {
+        return { eventId: envelope.eventId, eventName: envelope.eventType, resourceType: WEBHOOK_RESOURCE_TYPE.PAYOUT, resourceId: data.reference, eventTime: typeof envelope.timestamp === "string" ? new Date(envelope.timestamp) : null };
+    }
     return {
         eventId: envelope.eventId,
         eventName: envelope.eventType,

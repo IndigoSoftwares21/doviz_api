@@ -51,7 +51,7 @@ run("withdrawals against Postgres", () => {
     const userBalance = () => balance(LEDGER_ACCOUNT_KIND.USER_AVAILABLE, { userId });
     const activate = (name: string) => db.updateTable("provider_settings").set({ activeProvider: name }).where("service", "=", "payouts").execute();
     const withdraw = (amount: string, expectedTotal: string, idempotencyKey = randomUUID(), forUser = userId, account = bankAccountId) =>
-        createWithdrawal({ userId: forUser, bankAccountId: account, amount, expectedTotal, idempotencyKey, pin: "4827", ipAddress: null, userAgent: null });
+        createWithdrawal({ userId: forUser, destination: { bankAccountId: account }, narration: null, amount, expectedTotal, idempotencyKey, pin: "4827", ipAddress: null, userAgent: null });
     const row = (id: string) => db.selectFrom("bank_withdrawals").select(["status", "fee", "feeReserve", "totalHeld", "provider"]).where("id", "=", id).executeTakeFirstOrThrow();
 
     const newUser = async (funds: string) => {

@@ -8,6 +8,7 @@ import syncAccountDeposit from "@/actions/accountDeposit/syncAccountDeposit";
 import { setVirtualAccountProvider } from "@/services/virtualAccounts/getVirtualAccountProvider";
 import { ProviderAccountDeposit } from "@/services/virtualAccounts/virtualAccountProvider";
 import { LEDGER_ACCOUNT_KIND } from "@/constants/ledger";
+import runAccountSweep from "@/actions/accountSweep/runAccountSweep";
 
 const run = process.env.DB_INTEGRATION === "true" ? describe : describe.skip;
 
@@ -19,7 +20,8 @@ run("crediting account-number payments against Postgres", () => {
         createAccount: jest.fn(), verifyWebhook: () => true, parseWebhook: () => null, isWebhookPing: () => false,
         getDeposit: jest.fn(async ({ reference }: { reference: string }) => deposits.get(reference) ?? null),
     });
-    const fossapay = fakeProvider("fossapay");
+    const sweepToPool = jest.fn(async () => undefined);
+    const fossapay = { ...fakeProvider("fossapay"), sweepToPool };
     const squad = fakeProvider("squad");
     const number = () => String(1_000_000_000 + (randomBytes(4).readUInt32BE() % 8_999_999_999)).slice(0, 10);
 
@@ -51,6 +53,7 @@ run("crediting account-number payments against Postgres", () => {
         setVirtualAccountProvider(null);
         if (users.length) {
             await db.deleteFrom("virtual_accounts").where("userId", "in", users).execute();
+            await db.deleteFrom("account_sweeps").where("provider", "in", ["fossapay", "squad"]).where("depositReference", "like", "txn_%").execute();
         }
         await disconnect();
     });
@@ -67,6 +70,35 @@ run("crediting account-number payments against Postgres", () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({ userId, provider: "fossapay", status: "completed", amountReceived: "5000.00", providerFee: "50.00", amountCredited: "4950.00", senderName: "JOHN DOE", accountNumber });
         expect(await balance(userId)).toBe("4950.00");
+    });
+
+    it("moves each credited Fossapay deposit (net of fee) into the pool once, retrying a failed attempt", async () => {
+        const { accountNumber } = await userWithAccount("fossapay");
+        const paid = payment(accountNumber, { amount: { amount: "500.00", currency: "NGN" }, fee: { amount: "5.00", currency: "NGN" } });
+        deposits.set(paid.reference, paid);
+        sweepToPool.mockClear();
+        sweepToPool.mockRejectedValueOnce(new Error("Fossapay down"));
+
+        await syncAccountDeposit({ provider: "fossapay", reference: paid.reference });
+        const [sweep] = await db.selectFrom("account_sweeps").selectAll().where("depositReference", "=", paid.reference).execute();
+        expect(sweep).toMatchObject({ provider: "fossapay", fromAccount: accountNumber, amount: "495.00", status: "pending", attempts: 1, lastError: "Fossapay down" });
+        expect(sweep.reference).toMatch(/^sw[0-9a-f]{30}$/);
+
+        await expect(runAccountSweep({ id: sweep.id })).resolves.toEqual({ data: { status: "completed" } });
+        expect(sweepToPool).toHaveBeenLastCalledWith({ fromAccount: accountNumber, amount: "495.00", reference: sweep.reference });
+        await expect(runAccountSweep({ id: sweep.id })).resolves.toEqual({ data: { status: "completed" } });
+        expect(sweepToPool).toHaveBeenCalledTimes(2); // the failed try + the one that worked — never a third
+
+        await syncAccountDeposit({ provider: "fossapay", reference: paid.reference });
+        expect(await db.selectFrom("account_sweeps").select("id").where("depositReference", "=", paid.reference).execute()).toHaveLength(1);
+    });
+
+    it("never sweeps for a provider that settles to us itself (Squad)", async () => {
+        const { accountNumber } = await userWithAccount("squad");
+        const paid = payment(accountNumber);
+        deposits.set(paid.reference, paid);
+        await syncAccountDeposit({ provider: "squad", reference: paid.reference });
+        expect(await db.selectFrom("account_sweeps").select("id").where("depositReference", "=", paid.reference).execute()).toHaveLength(0);
     });
 
     it("keeps crediting a Squad account after Fossapay became the active provider — each account's own provider is asked", async () => {

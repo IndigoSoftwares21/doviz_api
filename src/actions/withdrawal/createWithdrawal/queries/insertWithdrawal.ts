@@ -5,7 +5,9 @@ interface IInsertWithdrawal {
     trx: Kysely<Database>;
     id: string;
     userId: string;
-    bankAccountId: string;
+    /** Exactly one: the user's saved account, or the recipient as their bank named them. */
+    destination: { bankAccountId: string } | { recipientPayoutBankId: string; recipientAccountNumber: string; recipientAccountName: string };
+    narration: string;
     provider: string;
     environment: string;
     providerBankCode: string;
@@ -21,7 +23,8 @@ const insertWithdrawal = async ({
     trx,
     id,
     userId,
-    bankAccountId,
+    destination,
+    narration,
     provider,
     environment,
     providerBankCode,
@@ -37,7 +40,8 @@ const insertWithdrawal = async ({
         .values({
             id,
             userId,
-            bankAccountId,
+            ...destination,
+            narration,
             provider,
             environment,
             providerBankCode,

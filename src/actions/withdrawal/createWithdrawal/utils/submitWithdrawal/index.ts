@@ -24,6 +24,7 @@ const submitWithdrawal = async ({
     accountNumber,
     accountName,
     amount,
+    narration,
     customer,
 }: {
     withdrawalId: string;
@@ -32,6 +33,7 @@ const submitWithdrawal = async ({
     accountNumber: string;
     accountName: string;
     amount: string;
+    narration: string;
     customer: { name: string; email: string | null };
 }) => {
     try {
@@ -41,7 +43,7 @@ const submitWithdrawal = async ({
             accountNumber,
             accountName,
             amount: { amount, currency: WITHDRAWALS.CURRENCY },
-            narration: WITHDRAWALS.NARRATION,
+            narration,
             customer,
         });
         await updateWithdrawalSubmitted({ id: withdrawalId, providerReference: payout.providerReference });

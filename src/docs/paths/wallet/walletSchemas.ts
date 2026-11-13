@@ -59,11 +59,38 @@ export const statementDetail = {
     ...detailLine,
     properties: {
         ...detailLine.properties,
+        withdrawal: {
+            type: ["object", "null"],
+            description: "Set for withdrawals to a bank: the receipt.",
+            properties: {
+                id: { type: "string", format: "uuid" },
+                reference: { type: "string", description: "Quote this to support." },
+                status: { type: "string", enum: ["pending", "processing", "completed", "failed"] },
+                recipient: {
+                    type: "object",
+                    properties: {
+                        name: { type: ["string", "null"], example: "ADA OKAFOR" },
+                        bankName: { type: ["string", "null"], example: "OPay - Paycom" },
+                        accountNumber: { type: ["string", "null"], example: "8031234567" },
+                    },
+                },
+                narration: { type: "string", example: "Ziks withdrawal" },
+                amount: { type: "string", example: "100.00", description: "What the recipient gets." },
+                fee: { type: "string", example: "20.00", description: "The real fee once the payout settles; the reserved fee until then." },
+                total: { type: "string", example: "120.00", description: "amount + fee — what left the balance." },
+                failureReason: { type: ["string", "null"] },
+                requestedAt: { type: ["string", "null"], format: "date-time" },
+                completedAt: { type: ["string", "null"], format: "date-time" },
+            },
+        },
         bankTransfer: {
             type: ["object", "null"],
             description: "Set for naira top-ups by bank transfer.",
             properties: {
                 id: { type: "string", format: "uuid", description: "The naira deposit." },
+                amountSent: { type: ["string", "null"], example: "500.00", description: "What the sender transferred." },
+                fee: { type: ["string", "null"], example: "10.00", description: "The transfer fee the user bore (0.00 when Ziks absorbs it)." },
+                amountCredited: { type: ["string", "null"], example: "490.00", description: "What reached the balance (amountSent − fee)." },
                 sender: {
                     type: ["object", "null"],
                     description: "Who sent the money — the external account it came from (never Ziks's own), as the provider reports it. Account number masked to its last 4 digits. null until paid, or when the provider doesn't say.",

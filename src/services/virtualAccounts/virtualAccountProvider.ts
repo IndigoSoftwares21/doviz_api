@@ -60,6 +60,13 @@ export interface VirtualAccountProvider {
     isWebhookPing(body: unknown): boolean;
     /** Re-fetches a deposit from the provider. null = no such deposit. Throws when the provider can't be reached. */
     getDeposit(args: { reference: string }): Promise<ProviderAccountDeposit | null>;
+
+    /**
+     * Only for providers that leave deposits in a per-user wallet (Fossapay):
+     * moves `amount` from that wallet into our pooled (master) wallet. The same
+     * `reference` must never move money twice. Throws if it didn't happen.
+     */
+    sweepToPool?(args: { fromAccount: string; amount: string; reference: string }): Promise<void>;
 }
 
 export const VIRTUAL_ACCOUNT_ERROR = {

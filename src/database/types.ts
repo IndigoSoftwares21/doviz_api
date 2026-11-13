@@ -10,6 +10,21 @@ import { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysel
 
 // Database interface with auto-generated fields wrapped in Generated<>
 export interface Database {
+  account_sweeps: {
+    id: Generated<string>;
+    provider: ColumnType<string>;
+    depositReference: ColumnType<string>;
+    fromAccount: ColumnType<string>;
+    amount: ColumnType<string>;
+    reference: ColumnType<string>;
+    status: ColumnType<string>;
+    attempts: ColumnType<number>;
+    lastError: ColumnType<string | null>;
+    createdAt: Generated<Date>;
+    updatedAt: Generated<Date>;
+    completedAt: ColumnType<Date | null>;
+  };
+
   app_settings: {
     key: ColumnType<string>;
     value: ColumnType<string>;
@@ -53,7 +68,7 @@ export interface Database {
   bank_withdrawals: {
     id: Generated<string>;
     userId: ColumnType<string>;
-    bankAccountId: ColumnType<string>;
+    bankAccountId: ColumnType<string | null>;
     provider: ColumnType<string>;
     providerReference: ColumnType<string | null>;
     currency: ColumnType<string>;
@@ -72,6 +87,10 @@ export interface Database {
     feeReserve: ColumnType<string>;
     totalHeld: ColumnType<string>;
     providerBankCode: ColumnType<string>;
+    recipientPayoutBankId: ColumnType<string | null>;
+    recipientAccountNumber: ColumnType<string | null>;
+    recipientAccountName: ColumnType<string | null>;
+    narration: ColumnType<string | null>;
   };
 
   bill_categories: {

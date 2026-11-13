@@ -1,25 +1,24 @@
 import Decimal from "decimal.js";
 import fetchActivePayoutProvider from "@/actions/payoutProvider/fetchActivePayoutProvider";
-import selectQuoteBankAccount from "./queries/selectQuoteBankAccount";
-import selectProviderBankId from "./queries/selectProviderBankId";
+import resolveDestination, { WithdrawalDestination } from "./utils/resolveDestination";
 import estimatePayoutFee from "./utils/estimatePayoutFee";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import WITHDRAWALS from "@/constants/withdrawals";
 
 /**
- * What a withdrawal will cost, with the provider active RIGHT NOW. The fee is
- * dynamic and paid by the user: exact when the provider can quote it, else a
- * reserve — the higher of the provider's configured default fee
+ * What a withdrawal will cost, with the provider active RIGHT NOW, to either
+ * one of the user's own accounts or anyone's (see resolveDestination). The fee
+ * is dynamic and paid by the user: exact when the provider can quote it, else
+ * a reserve — the higher of the provider's configured default fee
  * (payout_fee_defaults) and the highest real fee it charged us recently. The
- * real fee is charged at settlement and any unused reserve goes straight back. The app shows this before the PIN, and
- * the server recomputes it on confirm (a change → the user re-confirms).
+ * real fee is charged at settlement and any unused reserve goes straight back.
+ * The app shows this before the PIN, and the server recomputes it on confirm
+ * (a change → the user re-confirms).
  */
-const fetchWithdrawalQuote = async ({ userId, bankAccountId, amount }: { userId: string; bankAccountId: string; amount: string }) => {
+const fetchWithdrawalQuote = async ({ userId, destination, amount }: { userId: string; destination: WithdrawalDestination; amount: string }) => {
     const { data: provider } = await fetchActivePayoutProvider();
-    const account = await selectQuoteBankAccount({ bankAccountId, userId });
-
-    const mapping = await selectProviderBankId({ payoutBankId: account.payoutBankId, provider: provider.name, environment: provider.environment });
-    if (!mapping) return { data: null, failure: ACTION_FAILURE.BANK_UNSUPPORTED, limits: null };
+    const resolved = await resolveDestination({ userId, destination, provider });
+    if (!resolved.data) return { data: null, failure: resolved.failure, limits: null };
 
     const money = { amount: new Decimal(amount).toFixed(2), currency: WITHDRAWALS.CURRENCY };
     const { limits } = provider;
@@ -31,8 +30,8 @@ const fetchWithdrawalQuote = async ({ userId, bankAccountId, amount }: { userId:
 
     const data = {
         provider,
-        providerBankId: mapping.providerBankId,
-        account,
+        providerBankId: resolved.data.providerBankId,
+        account: resolved.data,
         amount: money.amount,
         currency: money.currency,
         /** Exact fee, or the reserve held to cover it (charged at cost, the rest returned). */

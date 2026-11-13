@@ -1,7 +1,7 @@
 import { VirtualAccountProvider } from "./virtualAccountProvider";
 import SquadClient from "./providers/squad/squadClient";
 import SquadVirtualAccountProvider from "./providers/squad/squadVirtualAccountProvider";
-import FossapayClient from "./providers/fossapay/fossapayClient";
+import FossapayClient from "@/services/fossapay/fossapayClient";
 import FossapayVirtualAccountProvider from "./providers/fossapay/fossapayVirtualAccountProvider";
 
 const SQUAD_URL = { sandbox: "https://sandbox-api-d.squadco.com", production: "https://api-d.squadco.com" } as const;

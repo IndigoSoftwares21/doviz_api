@@ -3,7 +3,8 @@ import BRAND from "@/constants/brand";
 /** Withdrawals to the user's own bank. Values match the DB CHECK constraints. */
 const WITHDRAWALS = {
     CURRENCY: "NGN",
-    MIN_AMOUNT: "100.00",
+    /** The least anyone can withdraw (a provider may set a higher one — Korapay ₦1,000; Fossapay has none above ₦1). */
+    MIN_AMOUNT: "50.00",
     MAX_AMOUNT: "5000000.00",
     /** POST /wallet/withdrawals waits this long for the provider, then answers `pending`. */
     SUBMIT_WAIT_MS: 8 * 1000,
@@ -16,6 +17,8 @@ const WITHDRAWALS = {
     RECONCILE_MIN_AGE_MS: 60 * 1000,
     RECONCILE_BATCH_SIZE: 50,
     NARRATION: `${BRAND.NAME} withdrawal`,
+    /** A user's own description on a transfer to someone else (banks show ~30–50 characters). */
+    NARRATION_MAX_LENGTH: 50,
 } as const;
 
 /** The service names in provider_settings. */

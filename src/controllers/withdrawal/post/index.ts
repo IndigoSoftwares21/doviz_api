@@ -3,7 +3,7 @@ import handleSuccess from "@/utils/handleSuccess";
 import handleError from "@/utils/handleError";
 import handlePinFailure from "@/utils/auth/handlePinFailure";
 import createWithdrawal from "@/actions/withdrawal/createWithdrawal";
-import { BANK_UNSUPPORTED } from "@/controllers/withdrawalQuote/get";
+import { BANK_UNSUPPORTED, TRANSFERS_TO_OTHERS_OFF, recipientNotFound } from "@/controllers/withdrawalQuote/get";
 import postWithdrawalSchema from "./schema/postWithdrawalSchema";
 import PIN_VERIFICATION_STATUS from "@/constants/pinVerificationStatus";
 import ACTION_FAILURE from "@/constants/actionFailure";
@@ -15,14 +15,15 @@ export const WITHDRAWALS_UNAVAILABLE = "Withdrawals are temporarily unavailable.
 
 const postWithdrawal = async (req: Request, res: Response) => {
     try {
-        const { bankAccountId, amount, expectedTotal, idempotencyKey, pin } = req.body;
+        const { bankAccountId, bankId, accountNumber, narration, amount, expectedTotal, idempotencyKey, pin } = req.body ?? {};
         const { id: userId } = req.user!;
 
-        const validated = await postWithdrawalSchema.parseAsync({ userId, bankAccountId, amount, expectedTotal, idempotencyKey, pin });
+        const validated = await postWithdrawalSchema.parseAsync({ userId, bankAccountId, bankId, accountNumber, narration, amount, expectedTotal, idempotencyKey, pin });
 
         const { data, failure, verification, isNew, limits } = await createWithdrawal({
             userId,
-            bankAccountId: validated.bankAccountId,
+            destination: validated.destination,
+            narration: validated.narration,
             amount: validated.amount,
             expectedTotal: validated.expectedTotal,
             idempotencyKey: validated.idempotencyKey,
@@ -33,6 +34,8 @@ const postWithdrawal = async (req: Request, res: Response) => {
 
         if (verification.status !== PIN_VERIFICATION_STATUS.VERIFIED) return handlePinFailure({ res, req, verification });
         if (failure === ACTION_FAILURE.BANK_UNSUPPORTED) return handleError({ res, req, message: BANK_UNSUPPORTED, code: 400 });
+        if (failure === ACTION_FAILURE.TRANSFERS_TO_OTHERS_OFF) return handleError({ res, req, message: TRANSFERS_TO_OTHERS_OFF, code: 403 });
+        if (failure === ACTION_FAILURE.RECIPIENT_ACCOUNT_NOT_FOUND) return handleError({ res, req, error: recipientNotFound() });
         if (failure === ACTION_FAILURE.AMOUNT_OUT_OF_RANGE && limits) return handleError({ res, req, message: describeLimits({ amount: validated.amount, limits }), code: 400 });
         if (failure === ACTION_FAILURE.QUOTE_CHANGED) return handleError({ res, req, message: QUOTE_CHANGED, code: 409 });
         if (failure === ACTION_FAILURE.INSUFFICIENT_BALANCE) return handleError({ res, req, message: WITHDRAWAL_INSUFFICIENT_BALANCE, code: 402 });
