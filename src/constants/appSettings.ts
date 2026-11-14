@@ -9,7 +9,7 @@ export const APP_SETTINGS = {
     /** Which checks identity verification runs. */
     kyc_level: { values: Object.keys(KYC_FORMS), fallback: "bvn" },
     /** Whether users can send to ANY bank account, not just their own saved ones. */
-    bank_transfers_to_others: { values: ["on", "off"], fallback: "off" },
+    bank_transfers_to_others: { values: ["on", "off"], fallback: "on" },
 } as const satisfies Record<string, { values: readonly string[]; fallback: string }>;
 
 export type AppSettingKey = keyof typeof APP_SETTINGS;

@@ -31,5 +31,5 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER bank_withdrawals_recipient_guard BEFORE UPDATE ON bank_withdrawals
     FOR EACH ROW EXECUTE FUNCTION bank_withdrawals_recipient_guard();
 
--- Off until switched on (npm run settings:set -- bank_transfers_to_others on).
-INSERT INTO app_settings (key, value) VALUES ('bank_transfers_to_others', 'off') ON CONFLICT (key) DO NOTHING;
+-- On by default; switch off with `npm run settings:set -- bank_transfers_to_others off`.
+INSERT INTO app_settings (key, value) VALUES ('bank_transfers_to_others', 'on') ON CONFLICT (key) DO NOTHING;
