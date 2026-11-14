@@ -20,8 +20,10 @@ const CRYPTO_PURCHASES = {
     DEFAULT_RATE_HOURS: 24,
     /** set-rate refuses a bigger jump from the current rate without --force (typo guard). */
     MAX_RATE_CHANGE_PERCENT: 5,
-    /** Provider catalog terms (fee, minimum) are cached this long. */
-    SEND_TERMS_CACHE_MS: 5 * 60 * 1000,
+    /** The provider's live fee / minimum / on-off is reused this long (then fetched again). */
+    SEND_TERMS_CACHE_MS: 60 * 1000,
+    /** The provider's balance of a coin (what we can sell) is reused this long. */
+    STOCK_CACHE_MS: 20 * 1000,
     /** The coin every market price is in, and whose naira rate we set by hand. */
     BASE_SYMBOL: "USDT",
     /** A provider's live coin price (e.g. ETH in USDT) is reused this long. */

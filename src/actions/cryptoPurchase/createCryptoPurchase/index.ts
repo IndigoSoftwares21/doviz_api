@@ -65,7 +65,9 @@ const createCryptoPurchase = async (input: ICreateCryptoPurchase) => {
 
     const address = input.address.trim();
     const memo = input.memo?.trim() || null;
-    if (!isValidCryptoAddress({ network: quote.asset.network, address }) || (quote.memoRequired && !memo)) return result({ failure: ACTION_FAILURE.INVALID_ADDRESS });
+    // A memo is optional even where the network supports one: personal wallets
+    // and exchanges with a per-user address (e.g. Bybit on TON) need none.
+    if (!isValidCryptoAddress({ network: quote.asset.network, address })) return result({ failure: ACTION_FAILURE.INVALID_ADDRESS });
 
     const needed = new Decimal(quote.cryptoAmount).plus(quote.networkFee).toFixed();
     if (!(await checkCryptoStock({ provider, providerAssetId: quote.providerAssetId, needed }))) return result({ failure: ACTION_FAILURE.STOCK_UNAVAILABLE });

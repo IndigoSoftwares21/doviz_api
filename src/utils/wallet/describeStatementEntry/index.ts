@@ -36,7 +36,7 @@ const describeStatementEntry = ({
         case LEDGER_TRANSACTION_TYPE.NAIRA_DEPOSIT:
             return "Bank transfer deposit";
         case LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_HOLD:
-            return "Crypto purchase";
+            return symbol && cryptoAmount ? `Bought ${new Decimal(cryptoAmount).toFixed()} ${symbol}` : "Crypto purchase";
         case LEDGER_TRANSACTION_TYPE.CRYPTO_PURCHASE_REVERSAL:
             return "Crypto purchase refunded";
         case LEDGER_TRANSACTION_TYPE.INTERNAL_TRANSFER:

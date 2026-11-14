@@ -4,6 +4,8 @@ import fetchCryptoBuyPrice from "@/actions/cryptoBuyPrice/fetchCryptoBuyPrice";
 import priceCryptoPurchase from "@/utils/cryptoPurchases/priceCryptoPurchase";
 import selectBuyAssets from "./queries/selectBuyAsset";
 import fetchSendTerms from "./utils/fetchSendTerms";
+import fetchCryptoStock from "@/utils/cryptoPurchases/fetchCryptoStock";
+import maxSendable from "@/utils/cryptoPurchases/maxSendable";
 import ACTION_FAILURE from "@/constants/actionFailure";
 import CRYPTO_PURCHASES from "@/constants/cryptoPurchases";
 import { CryptoBuyLimits, CryptoBuyPreview } from "./types";
@@ -23,7 +25,9 @@ export type { CryptoBuyLimits } from "./types";
  * current price (fetchCryptoBuyPrice: a rate we set, or the market). Shown
  * before the PIN; recomputed on confirm. Fails (nothing to buy) when: no
  * provider is set up, the coin isn't buyable on it, there's no price we trust, the
- * provider has paused sends, or the amount is outside the limits — `limits`
+ * provider has paused sends, we don't hold enough of the coin to send even
+ * the minimum, or the amount is outside the limits (ours, the provider's
+ * minimum, or what our stock can deliver) — `limits`
  * then says what's allowed, and `preview` still has the conversion (so the
  * app can show "≈ 0.5 USDT" next to "the minimum is …"; it can't be bought).
  */
@@ -42,6 +46,10 @@ const fetchCryptoBuyQuote = async ({ assetId, cryptoAmount, nairaTotal }: IFetch
     const terms = await fetchSendTerms({ provider, asset });
     if (!terms || !terms.isEnabled) return fail(ACTION_FAILURE.ASSET_UNAVAILABLE);
 
+    const stock = await fetchCryptoStock({ provider, symbol: asset.symbol, providerAssetId: asset.providerAssetId });
+    const maxCrypto = maxSendable({ stock, fee: terms.fee, precision: terms.precision });
+    if (maxCrypto !== null && new Decimal(maxCrypto).lessThan(terms.minAmount)) return fail(ACTION_FAILURE.STOCK_UNAVAILABLE);
+
     const pricing = {
         rate: rate.rate,
         markupPercent: rate.markupPercent,
@@ -53,12 +61,18 @@ const fetchCryptoBuyQuote = async ({ assetId, cryptoAmount, nairaTotal }: IFetch
         ...pricing,
         cryptoAmount: terms.minAmount,
     });
+    const most = maxCrypto === null ? null : priceCryptoPurchase({ ...pricing, cryptoAmount: maxCrypto });
+    const stockLimited = most !== null && new Decimal(most.total).lessThan(CRYPTO_PURCHASES.MAX_TOTAL);
+    const maxTotal = stockLimited ? most.total : CRYPTO_PURCHASES.MAX_TOTAL;
+    const overStock = price !== null && maxCrypto !== null && new Decimal(price.cryptoAmount).greaterThan(maxCrypto);
     const limits: CryptoBuyLimits = {
         symbol: asset.symbol,
         minCrypto: new Decimal(terms.minAmount).toFixed(),
         minTotal: Decimal.max(CRYPTO_PURCHASES.MIN_TOTAL, cheapest?.total ?? 0).toFixed(2),
-        maxTotal: CRYPTO_PURCHASES.MAX_TOTAL,
-        tooHigh: price !== null && new Decimal(price.total).greaterThan(CRYPTO_PURCHASES.MAX_TOTAL),
+        maxCrypto,
+        maxTotal,
+        stockLimited,
+        tooHigh: price !== null && (overStock || new Decimal(price.total).greaterThan(CRYPTO_PURCHASES.MAX_TOTAL)),
     };
     if (!price) return fail(ACTION_FAILURE.AMOUNT_OUT_OF_RANGE, limits);
 
@@ -80,7 +94,8 @@ const fetchCryptoBuyQuote = async ({ assetId, cryptoAmount, nairaTotal }: IFetch
     const outOfRange =
         new Decimal(price.cryptoAmount).lessThan(terms.minAmount) ||
         new Decimal(price.total).lessThan(CRYPTO_PURCHASES.MIN_TOTAL) ||
-        new Decimal(price.total).greaterThan(CRYPTO_PURCHASES.MAX_TOTAL);
+        new Decimal(price.total).greaterThan(CRYPTO_PURCHASES.MAX_TOTAL) ||
+        overStock;
     if (outOfRange) return fail(ACTION_FAILURE.AMOUNT_OUT_OF_RANGE, limits, data);
 
     return { data, failure: null, limits: null, preview: null };

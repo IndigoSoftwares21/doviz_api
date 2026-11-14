@@ -44,7 +44,7 @@ Statuses: `pending`, `processing`, `needs_review`, `completed`, `failed`.
 
 | Coin | Networks (our names) |
 |---|---|
-| USDT | TRC20, BEP20, ERC20, POLYGON, ARBITRUM, OPTIMISM, AVAXC, SOLANA, TON (memo required: KuCoin's `needTag`) |
+| USDT | TRC20, BEP20, ERC20, POLYGON, ARBITRUM, OPTIMISM, AVAXC, SOLANA, TON (memo supported, optional: KuCoin's `needTag`; Bybit and personal wallets need none) |
 | USDC | ERC20, POLYGON, ARBITRUM, OPTIMISM, BASE, AVAXC, SOLANA |
 | ETH | ETHEREUM (mainnet; the row selling uses), BEP20, ARBITRUM, OPTIMISM, BASE |
 
@@ -120,7 +120,7 @@ All endpoints need auth and are documented in Scalar under **Buy crypto**.
 
 | Endpoint | |
 |---|---|
-| `GET /crypto/buy/assets` | Buyable coins and networks, with fee, minimum and current unit price. `isAvailable: false` while no rate is in force. |
+| `GET /crypto/buy/assets` | Buyable coins and networks, with fee, minimum, `maxAmount`/`maxTotal` (what our stock can deliver) and current unit price. Only coins we hold enough of to cover a network's minimum + fee are listed (provider balance, cached 20 s; a failed lookup hides the coin). `isAvailable: false` while no rate is in force. |
 | `GET /crypto/buy/quote?assetId=&cryptoAmount=` or `&nairaTotal=` | Price a purchase. Send exactly one of the two amounts. |
 | `POST /crypto/buy` | Buy. Body: `assetId`, `cryptoAmount` or `nairaTotal`, `address`, `memo?`, `expectedTotal`, `expectedCryptoAmount` (recommended), `idempotencyKey` (UUID, reused on retry), `pin`. |
 | `GET /crypto/buy/:purchaseId` | One purchase. Fetch it when `crypto_purchase.updated` names it, or after the socket reconnects. |
@@ -131,14 +131,15 @@ Errors:
 |---|---|
 | 400 | Invalid input, address or amount, or the coin isn't buyable right now. |
 | 402 | The balance doesn't cover the total. |
+| 400 (quote) | Over what our stock can deliver: "You can buy up to ₦X (Y USDT) right now." |
 | 409 | The price moved against the user (more naira, or over 0.5% less coin). Re-quote and confirm again. |
-| 503 | Buying is paused (no provider, low stock, or no current rate). Nothing was taken. |
+| 503 | Buying is paused (no provider, sold out / balance lookup failed, or no current rate). Nothing was taken. |
 
 ## Ops commands
 
 | Command | What it does |
 |---|---|
-| `npm run crypto-sends:sync [-- <provider>] [--enable]` | Maps a provider's coins/networks onto ours and stores fee, minimum, precision and memo. Defaults to the active provider. New coins start buy-enabled. `--enable` also switches buying on for coins that already existed (e.g. USDT/TRC20 from selling). A coin someone switched off stays off without it. |
+| `npm run crypto-sends:sync [-- <provider>] [--enable]` | **Run once per new coin/network**, not to refresh fees: fees, minimums and on/off are read live from the provider (cached 60 s; the stored values are only a fallback when it can't be reached). Maps a provider's coins/networks onto ours and stores fee, minimum, precision and memo. Defaults to the active provider. New coins start buy-enabled. `--enable` also switches buying on for coins that already existed (e.g. USDT/TRC20 from selling). A coin someone switched off stays off without it. |
 | `npm run crypto-sends:use -- <provider>` | Makes a provider active for new purchases. Refuses one with no synced coins. Audited. |
 | `npm run crypto:set-rate -- USDT 1650 [--markup 1.5] [--hours 24] [--note "…"] [--force]` | Sets our naira price per coin. It expires after `--hours` (default 24, max 168), and **buying that coin pauses once it expires**. Refuses a change of more than 5% from the last rate unless you add `--force` (to catch typos). Audited. |
 | `npm run crypto:set-buy-markup -- ETH 2 [--note "…"]` | Our markup on a market-priced coin (0–20%). Audited; the next quote uses it. Not for USDT (set its rate's `--markup`). |

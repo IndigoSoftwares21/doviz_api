@@ -44,6 +44,16 @@ const selectStatementEntries = async ({
                 ]),
             ),
         )
+        // The crypto purchase this line belongs to (its hold, or its refund).
+        .leftJoin("crypto_purchases", (join) =>
+            join.on((eb) =>
+                eb.or([
+                    eb("crypto_purchases.holdLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                    eb("crypto_purchases.finalLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                ]),
+            ),
+        )
+        .leftJoin("crypto_assets as purchase_asset", "purchase_asset.id", "crypto_purchases.assetId")
         .leftJoin("billers", "billers.id", "bill_payments.billerId")
         .leftJoin("bill_products", "bill_products.id", "bill_payments.productId")
         .select([
@@ -73,6 +83,22 @@ const selectStatementEntries = async ({
             "bill_products.name as billProductName",
             "bill_payments.customerId as billCustomerId",
             "bill_payments.token as billToken",
+            "crypto_purchases.id as purchaseId",
+            "crypto_purchases.status as purchaseStatus",
+            "purchase_asset.symbol as purchaseSymbol",
+            "purchase_asset.network as purchaseNetwork",
+            "crypto_purchases.cryptoAmount as purchaseCryptoAmount",
+            "crypto_purchases.networkFee as purchaseNetworkFee",
+            "crypto_purchases.unitPrice as purchaseUnitPrice",
+            "crypto_purchases.nairaAmount as purchaseNairaAmount",
+            "crypto_purchases.nairaFee as purchaseNairaFee",
+            "crypto_purchases.totalNaira as purchaseTotal",
+            "crypto_purchases.address as purchaseAddress",
+            "crypto_purchases.memo as purchaseMemo",
+            "crypto_purchases.txHash as purchaseTxHash",
+            "crypto_purchases.failureReason as purchaseFailureReason",
+            "crypto_purchases.requestedAt as purchaseRequestedAt",
+            "crypto_purchases.finalizedAt as purchaseCompletedAt",
         ])
         .where("ledger_accounts.kind", "=", LEDGER_ACCOUNT_KIND.USER_AVAILABLE)
         .where("ledger_accounts.userId", "=", userId);
@@ -89,6 +115,7 @@ const selectStatementEntries = async ({
             const matches: Expression<SqlBool>[] = [
                 eb("billers.name", "ilike", search.contains),
                 eb("crypto_assets.symbol", "ilike", search.prefix),
+                eb("purchase_asset.symbol", "ilike", search.prefix),
             ];
             if (search.amount) matches.push(sql<SqlBool>`abs(${eb.ref("ledger_entries.amount")}) = ${search.amount}::numeric`);
             if (search.referencePrefix) matches.push(sql<SqlBool>`${eb.ref("ledger_entries.id")}::text ilike ${search.referencePrefix}`);

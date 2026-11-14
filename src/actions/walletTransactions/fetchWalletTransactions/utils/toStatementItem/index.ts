@@ -2,8 +2,9 @@ import Decimal from "decimal.js";
 import { ENTRY_DIRECTION } from "@/constants/ledger";
 import describeStatementEntry from "@/utils/wallet/describeStatementEntry";
 import toStatementTransfer, { StatementTransferRow } from "@/utils/transfers/toStatementTransfer";
+import toStatementCryptoPurchase, { StatementCryptoPurchaseRow } from "@/utils/cryptoPurchases/toStatementCryptoPurchase";
 
-interface StatementRow extends StatementTransferRow {
+interface StatementRow extends StatementTransferRow, StatementCryptoPurchaseRow {
     id: string;
     amount: string;
     balanceAfter: string;
@@ -29,6 +30,7 @@ interface StatementRow extends StatementTransferRow {
 const toStatementItem = ({ row }: { row: StatementRow }) => {
     const amount = new Decimal(row.amount);
     const transfer = toStatementTransfer({ row, isDebit: amount.isNegative() });
+    const cryptoPurchase = toStatementCryptoPurchase({ row });
 
     return {
         id: row.id,
@@ -40,8 +42,8 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
             transfer?.description ??
             describeStatementEntry({
                 type: row.type,
-                symbol: row.symbol,
-                cryptoAmount: row.cryptoAmount,
+                symbol: row.symbol ?? cryptoPurchase?.symbol ?? null,
+                cryptoAmount: row.cryptoAmount ?? cryptoPurchase?.cryptoAmount ?? null,
                 billCategory: row.billCategory,
             }),
         createdAt: row.createdAt,
@@ -66,6 +68,8 @@ const toStatementItem = ({ row }: { row: StatementRow }) => {
                   token: row.billToken,
               }
             : null,
+        /** Crypto bought with naira: the coin, where it went, and the on-chain hash once sent. */
+        cryptoPurchase,
         /** A Ziks-to-Ziks transfer: who it was with (as on the transfer). */
         transfer: transfer && {
             direction: transfer.direction,

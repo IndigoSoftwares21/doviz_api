@@ -47,6 +47,7 @@ const fetchWalletTransaction = async ({ userId, entryId }: { userId: string; ent
               }
             : null,
         bill: item.bill,
+        cryptoPurchase: item.cryptoPurchase,
         /** A withdrawal to a bank: the receipt — recipient, bank, narration, amount, fee, total, reference. */
         withdrawal: toWithdrawalReceipt(row),
     };

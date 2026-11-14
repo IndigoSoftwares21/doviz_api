@@ -26,6 +26,8 @@ export const buyAssetListItem = {
         networkFee: { type: ["string", "null"], example: "1", description: "In the coin; priced into the naira total." },
         currency: { type: "string", example: "NGN" },
         unitPrice: money("1650.00", "Naira per coin right now (USDT: our rate; USDC, ETH…: from the live market, moves); null while prices are being updated."),
+        maxAmount: { type: ["string", "null"], example: "250", description: "The most coin one purchase can deliver right now (our stock less the fee). null = no stock cap." },
+        maxTotal: { type: ["string", "null"], example: "347760.00", description: "The most naira one purchase can spend right now (stock or our per-purchase cap). null while unpriced." },
         isAvailable: { type: "boolean", example: true, description: "false while there's no price we trust (rate expired, or no live market price): shown, not buyable." },
     },
 };

@@ -4,6 +4,7 @@ import { CryptoBuyLimits } from "@/actions/cryptoBuyQuote/fetchCryptoBuyQuote";
 
 export const CRYPTO_BUY_MESSAGES = {
     UNAVAILABLE: "Buying crypto is unavailable right now. Please try again shortly.",
+    STOCK_UNAVAILABLE: "This coin is sold out right now. Try another coin or check back later.",
     ASSET_UNAVAILABLE: "This coin can't be bought right now. Try another network or check back later.",
     RATE_UNAVAILABLE: "Prices are being updated. Please try again in a few minutes.",
     INVALID_ADDRESS: "That address isn't valid for this network. Check it — crypto sent to a wrong address can't be recovered.",
@@ -20,8 +21,9 @@ export const CRYPTO_BUY_MESSAGES = {
 const cryptoPurchaseFailureResponse = ({ failure, limits }: { failure: string | null; limits?: CryptoBuyLimits | null }) => {
     switch (failure) {
         case ACTION_FAILURE.PROVIDER_UNAVAILABLE:
-        case ACTION_FAILURE.STOCK_UNAVAILABLE:
             return { code: 503, message: CRYPTO_BUY_MESSAGES.UNAVAILABLE };
+        case ACTION_FAILURE.STOCK_UNAVAILABLE:
+            return { code: 503, message: CRYPTO_BUY_MESSAGES.STOCK_UNAVAILABLE };
         case ACTION_FAILURE.RATE_UNAVAILABLE:
             return { code: 503, message: CRYPTO_BUY_MESSAGES.RATE_UNAVAILABLE };
         case ACTION_FAILURE.ASSET_UNAVAILABLE:
@@ -36,9 +38,11 @@ const cryptoPurchaseFailureResponse = ({ failure, limits }: { failure: string | 
             if (!limits) return { code: 400, message: CRYPTO_BUY_MESSAGES.ASSET_UNAVAILABLE };
             return {
                 code: 400,
-                message: limits.tooHigh
-                    ? `You can buy up to ₦${FormatNaira({ value: limits.maxTotal })} at a time.`
-                    : `The minimum is ₦${FormatNaira({ value: limits.minTotal })}.`,
+                message: !limits.tooHigh
+                    ? `The minimum is ₦${FormatNaira({ value: limits.minTotal })}.`
+                    : limits.stockLimited
+                      ? `You can buy up to ₦${FormatNaira({ value: limits.maxTotal })} (${limits.maxCrypto} ${limits.symbol}) right now.`
+                      : `You can buy up to ₦${FormatNaira({ value: limits.maxTotal })} at a time.`,
             };
         default:
             return null;

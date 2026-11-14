@@ -35,6 +35,16 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
         .leftJoin("user_bank_accounts as withdrawal_account", "withdrawal_account.id", "bank_withdrawals.bankAccountId")
         .leftJoin("payout_banks as withdrawal_bank", "withdrawal_bank.id", "withdrawal_account.payoutBankId")
         .leftJoin("payout_banks as recipient_bank", "recipient_bank.id", "bank_withdrawals.recipientPayoutBankId")
+        // The crypto purchase this line belongs to (its hold, or its refund).
+        .leftJoin("crypto_purchases", (join) =>
+            join.on((eb) =>
+                eb.or([
+                    eb("crypto_purchases.holdLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                    eb("crypto_purchases.finalLedgerTransactionId", "=", eb.ref("ledger_transactions.id")),
+                ]),
+            ),
+        )
+        .leftJoin("crypto_assets as purchase_asset", "purchase_asset.id", "crypto_purchases.assetId")
         .leftJoin("billers", "billers.id", "bill_payments.billerId")
         .leftJoin("bill_products", "bill_products.id", "bill_payments.productId")
         .select([
@@ -64,6 +74,22 @@ const selectStatementEntry = async ({ userId, entryId }: { userId: string; entry
             "bill_products.name as billProductName",
             "bill_payments.customerId as billCustomerId",
             "bill_payments.token as billToken",
+            "crypto_purchases.id as purchaseId",
+            "crypto_purchases.status as purchaseStatus",
+            "purchase_asset.symbol as purchaseSymbol",
+            "purchase_asset.network as purchaseNetwork",
+            "crypto_purchases.cryptoAmount as purchaseCryptoAmount",
+            "crypto_purchases.networkFee as purchaseNetworkFee",
+            "crypto_purchases.unitPrice as purchaseUnitPrice",
+            "crypto_purchases.nairaAmount as purchaseNairaAmount",
+            "crypto_purchases.nairaFee as purchaseNairaFee",
+            "crypto_purchases.totalNaira as purchaseTotal",
+            "crypto_purchases.address as purchaseAddress",
+            "crypto_purchases.memo as purchaseMemo",
+            "crypto_purchases.txHash as purchaseTxHash",
+            "crypto_purchases.failureReason as purchaseFailureReason",
+            "crypto_purchases.requestedAt as purchaseRequestedAt",
+            "crypto_purchases.finalizedAt as purchaseCompletedAt",
             "crypto_deposits.rateNgnPerUsd",
             "crypto_deposits.txHash",
             "crypto_deposits.confirmations",
